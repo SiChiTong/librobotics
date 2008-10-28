@@ -49,6 +49,7 @@
 #include <vector>
 #include <list>
 #include <algorithm>
+#include <fstream>
 
 /*-----------------------------------------------------------
  #
@@ -190,8 +191,8 @@
 #define VERY_SMALL          (1e-6)
 #define SQR(x)              ((x)*(x))
 #define SQUARE(x)           ((x)*(x))
-#define DEG2RAD(x)          ((x)/180.0 * M_PI)
-#define RAD2DEG(x)          ((x)/M_PI * 180.0)
+#define DEG2RAD(x)          (((x)/180.0) * M_PI)
+#define RAD2DEG(x)          (((x)/M_PI) * 180.0)
 #define SIZE(x, y)          (sqrt(SQR(x) + SQR(y)))
 
 //compare
@@ -226,10 +227,26 @@ T inline norm_a_deg(T a) {
                                 std::cout << idx << "," << x[idx] << std::endl; \
                             }
 
+//open file
+#define open_file_with_exception(f, n)     f.open(n.c_str()); \
+                                           if(!f.is_open()) { \
+                                               throw LibRoboticsIOException("Cannot open: %s", n.c_str()); \
+                                           } \
+
+//check vector size
+#define check_vsize2(v0, v1)                  (v0.size() == v1.size())
+#define check_vsize3(v0, v1, v2)              (check_vsize2(v0,v1) && check_vsize2(v0,v2))
+#define check_vsize4(v0, v1, v2, v3)          (check_vsize3(v0, v1, v2) && check_vsize2(v0, v3))
+#define check_vsize5(v0, v1, v2, v3, v4)      (check_vsize4(v0, v1, v2, v3) && check_vsize2(v0, v4))
+
+//warn on vector size compare
+#define warn_vsize2(v0, v1)                   if(!check_vsize2(v0,v1)) { \
+                                                    warn("#v0 and #v1 size are not match");\
+                                              } \
 
 /*------------------------------------------------
  *
- * Definition of the librobotics:: namespace
+ * Definition of the LibRobotics:: namespace
  *
  -------------------------------------------------*/
 
@@ -268,7 +285,7 @@ namespace librobotics {
 
     /*----------------------------------------------
      *
-     * Definition of the LibRobotics Exception structures
+     * Definition of the LibRobotics: Exception structures
      *
      ----------------------------------------------*/
     struct LibRoboticsException {
@@ -342,11 +359,38 @@ namespace librobotics {
         }
     }
 
-    /*-------------------------------------------------------------------------
+    /*----------------------------------------------
+     *
+     * Definition of the LibRobotics: Utilities functions
+     *
+     ----------------------------------------------*/
+
+#if librobotics_OS == 1
+#include <sys/time.h>
+#include <time.h>
+
+    inline double utils_get_current_time() {
+        timeval UTILS_SYS_TIME;
+        if (gettimeofday(&UTILS_SYS_TIME, NULL) != 0){
+            throw LibRoboticsRuntimeException("Cannot get time");
+        }
+        return (UTILS_SYS_TIME.tv_sec)  + (UTILS_SYS_TIME.tv_usec * 1e-6);
+    }
+#else
+    double utils_get_current_time() {
+        warn("%s is not yet implement on this OS", __FUNCTION__);
+        return 0;
+    }
+#endif
+
+
+
+
+    /*--------------------------------------------------------------------------------
      *
      * Definition of the LibRobotics: 2D robot configuration structures and functions
      *
-     -------------------------------------------------------------------------*/
+     --------------------------------------------------------------------------------*/
 
     template<typename T> struct vec2 {
         T x, y;
@@ -523,7 +567,31 @@ namespace librobotics {
 
         template<typename T1>
         pose2 operator - (const pose2<T1>& pose) const {
-            return pose2(x + pose.x, y + pose.y, a + pose.a);
+            return pose2(x - pose.x, y - pose.y, norm_a_rad(a - pose.a));
+        }
+
+        template<typename T1>
+        pose2 operator * (T1 val) const {
+            return pose2(x * val, y * val , a);
+        }
+
+        vec2<T> vec() const {
+            return vec2<T>(x, y);
+        }
+
+        template<typename T1>
+        vec2<T> vec_to(const pose2<T1>& pose) const {
+            return vec2<T>(pose.x - x, pose.y - y);
+        }
+
+        template<typename T1>
+        T dist_to(const pose2<T1>& pose) {
+            return sqrt(SQR(pose.x - x) + SQR(pose.y - y));
+        }
+
+        template<typename T1>
+        T angle_to(const pose2<T1>& pose) {
+            return norm_a_rad(pose.a - a);
         }
 
         void print() {
@@ -593,26 +661,73 @@ namespace librobotics {
      -------------------------------------------------------*/
 
 
-    template<typename T> struct log_lrf_data2 {
-        double time;
-        int partial;
-        int numvalue;
-        std::vector<T> val;
-        std::vector<T> angle;
-        pose2<T> offset;
-        pose2<T> estpos;
+    template<typename T1, typename T2> struct logdata_simple_odo_lrf {
+        std::vector<pose2<T1> > odo;
+        std::vector<std::vector<T2> > lrf;
+        int step;
+        std::ifstream log_file;
+        std::string label_odo;
+        std::string label_lrf;
+
+        logdata_simple_odo_lrf() : step(0) { }
+
+        void open(const std::string& filename,
+                  const std::string& odo_label = "Odometry",
+                  const std::string& lrf_label = "Laser")
+        {
+            open_file_with_exception(log_file, filename);
+            label_odo = odo_label;
+            label_lrf = lrf_label;
+        }
+
+        int read_all() {
+            while(read_one_step()) { }
+            return step;
+        }
+
+        bool read_one_step() {
+            //read 2 line (odo and lrf)
+            if(!read_one_line() || !read_one_line()) {
+                return false;
+            }
+            step++;
+            return true;
+        }
+
+        bool read_one_line() {
+            //get label
+            std::string tmp;
+            log_file >> tmp;
+
+            if(log_file.eof()) {
+                warn("End of log file");
+                return false;
+            }
 
 
-
+            if(tmp.compare(label_odo) == 0) {
+                pose2<T1> p;
+                log_file >> p;
+                p.a = norm_a_rad(p.a);
+                odo.push_back(p);
+            } else
+            if(tmp.compare(label_lrf) == 0) {
+                int max;
+                log_file >> max;
+                std::vector<T2> ranges(max);
+                for (int i = 0; i < max; i++) {
+                    log_file >> ranges[i];
+                }
+                lrf.push_back(ranges);
+            } else {
+                warn("Uninterpretable line with label: %s ", tmp.c_str());
+                return false;
+            }
+            return true;
+        }
     };
 
 
-
-
-    template<typename T> struct log_data {
-
-
-    };
 
 
     /*-------------------------------------------------------------------------
@@ -676,6 +791,7 @@ namespace librobotics {
     void lrf_init_lrf_data_angle(lrf_data<T1, T2>& lrf, T2 startTheta, T2 thetaStep) {
         if(lrf.angles.size() == 0) {
             librobotics::warn("size of angles is 0");
+            return;
         }
 
         T2 tmpTheta;
@@ -749,6 +865,25 @@ namespace librobotics {
         }
     }
 
+    template<typename T1, typename T2>
+    void lrf_scan_pose_to_global_pose(std::vector<vec2<T1> >& scanPose,
+                                      pose2<T2> lrf_offset,
+                                      pose2<T2> global_pose)
+    {
+        if(scanPose.size() == 0) {
+            librobotics::warn("size of scanPose is 0");
+            return;
+        }
+
+        for(size_t i = 0; i < scanPose.size(); i++ ) {
+            scanPose[i].rotate(lrf_offset.a);
+            scanPose[i] += lrf_offset.vec();
+            scanPose[i].rotate(global_pose.a);
+            scanPose[i] += global_pose.vec();
+        }
+
+    }
+
     template<typename T>
     void lrf_range_glitch_filter(std::vector<T>& ranges,
                                  T value = 0)
@@ -811,12 +946,12 @@ namespace librobotics {
     }
 
     template<typename T>
-    void lrfRangeThreshold(std::vector<T>& ranges,
-                           std::vector<unsigned char>& bad,
-                           T minValue,
-                           T newMinValue = 0,
-                           T maxValue = std::numeric_limits<T>::max(),
-                           T newMaxValue = 0)
+    void lrf_range_threshold(std::vector<T>& ranges,
+                             std::vector<unsigned int>& bad,
+                             T minValue,
+                             T newMinValue = 0,
+                             T maxValue = std::numeric_limits<T>::max(),
+                             T newMaxValue = 0)
     {
         if(bad.size() != ranges.size()) {
             throw librobotics::LibRoboticsRuntimeException("bad and ranges size are not match");
@@ -843,44 +978,125 @@ namespace librobotics {
                            T rangeThreshold,
                            T minValue = 0)
     {
-      if(seg.size() != ranges.size()) {
-          throw librobotics::LibRoboticsRuntimeException("seg and ranges size are not match");
-      }
+        if(seg.size() != ranges.size()) {
+            throw librobotics::LibRoboticsRuntimeException("seg and ranges size are not match");
+        }
 
-      bool newSegment = true;
-      T lastRange = 0;
-      int nSegment = 0;
+        bool newSegment = true;
+        T lastRange = 0;
+        int nSegment = 0;
 
-      for(size_t i = 0; i < ranges.size(); i++) {
-          if(ranges[i] > minValue) {
-              if(newSegment) {
+        for(size_t i = 0; i < ranges.size(); i++) {
+            if(ranges[i] > minValue) {
+                if(newSegment) {
                   //start new segment
                   seg[i] = nSegment;
                   newSegment = false;
-              } else {
+                } else {
                   if(fabs(ranges[i] - lastRange) > rangeThreshold) {
-                      //start new segment
-                      seg[i] = nSegment;
-                      newSegment = false;
-
                       //end current segment
                       nSegment++;
+
+                      //start new segment
+                      seg[i] = nSegment;
+                      lastRange = ranges[i];
+                      newSegment = false;
+
                   } else {
                       //continue current segment
                       seg[i] = nSegment;
                       lastRange = ranges[i];
                   }
-              }
-          } else {
-              if(!newSegment) {
-                  //end current segment
-                  nSegment++;
-                  newSegment = true;
-              } else {
-                  //ignore all value below thresholds
-              }
-          }
-      }
+                }
+            } else {
+                if(!newSegment) {
+                    //end current segment
+                    nSegment++;
+                    newSegment = true;
+                } else {
+                    //ignore all value below thresholds
+                    seg[i] = -1;
+                }
+            }
+        }
+    }
+
+    template<typename T>
+    void lrf_save_to_file(const std::string& filename,
+                          const std::vector<T>& lrf_range,
+                          const std::string& sperator = ",")
+    {
+        std::ofstream file;
+        open_file_with_exception(file, filename);
+        for(size_t i = 0; i < lrf_range.size(); i++ ) {
+            file << i << sperator << lrf_range[i] << std::endl;
+        }
+        file.close();
+    }
+
+    template<typename T1, typename T2>
+    void lrf_save_to_file(const std::string& filename,
+                          const std::vector<T1>& lrf_range0,
+                          const std::vector<T2>& lrf_range1,
+                          const std::string& sperator = ",")
+    {
+        std::ofstream file;
+        open_file_with_exception(file, filename);
+        warn_vsize2(lrf_range0, lrf_range1);
+        for(size_t i = 0;
+            (i < lrf_range0.size()) && (i < lrf_range0.size());
+            i++ )
+        {
+            file << i << sperator << lrf_range0[i]
+                      << sperator << lrf_range1[i] << std::endl;
+        }
+        file.close();
+    }
+
+    template<typename T1, typename T2, typename T3>
+    void lrf_save_to_file(const std::string& filename,
+                      const std::vector<T1>& lrf_range0,
+                      const std::vector<T2>& lrf_range1,
+                      const std::vector<T3>& lrf_range2,
+                      const std::string& sperator = ",")
+    {
+
+    }
+
+
+    template<typename T>
+    void lrf_save_to_file(const std::string& filename,
+                          const std::vector<std::vector<T> >& lrf_ranges_array,
+                          int step = -1,
+                          const std::string& sperator = ",")
+    {
+        std::ofstream file;
+        open_file_with_exception(file, filename);
+
+
+
+    }
+
+    template<typename T>
+    void lrf_save_to_file(const std::string& filename,
+                          const std::vector<vec2<T> > lrf_pts,
+                          const std::string& sperator = ",")
+    {
+        std::ofstream file;
+        open_file_with_exception(file, filename);
+        for(size_t i = 0; i < lrf_pts.size(); i++ ) {
+            file << i << sperator << lrf_pts[i].x << sperator << lrf_pts[i].y << std::endl;
+        }
+        file.close();
+    }
+
+    template<typename T>
+    void lrf_save_to_file(const std::string& filename,
+                          const std::vector<std::vector<vec2<T> > >& lrf_pts_array,
+                          int step = -1,
+                          const std::string& sperator = ",")
+    {
+
     }
 
     /*--------------------------------------------------------------------------------
@@ -901,7 +1117,8 @@ namespace librobotics {
             template<typename T>
             T range_finder_beam_model(T x, T x_mean, T x_max, T cov_hit, T rate_short) {
                 T p_hit =   2*stat_pdf_normal_1d(cov_hit, x_mean, x);
-                T p_short = ((x >= 0) && (x <= x_mean)) ? (1/(1-exp(-rate_short))) * stat_pdf_expo_1d(rate_short, x) : 0;
+                T p_short = ((x >= 0) && (x <= x_mean)) ?
+                        (1/(1-exp(-rate_short))) * stat_pdf_expo_1d(rate_short, x) : 0;
                 T p_max =   (x == x_max ? 1 : 0);
                 T p_rand =  ((x >= 0) && (x < x_max)) ? 1/x_max : 0;
                 return p_hit + p_short + p_max  + p_rand;
@@ -928,8 +1145,8 @@ namespace librobotics {
 
     typedef struct lrf_psm_cfg {
         lrf_psm_cfg() :
-            maxError(0.05), searchWndAngle(DEG2RAD(20)),
-            lrfMaxRange(4.0), lrfMinRange(0.1),
+            maxError(500), searchWndAngle(DEG2RAD(20)),
+            lrfMaxRange(4000), lrfMinRange(100),
             minValidPts(50), maxIter(20), smallCorrCnt(5)
         { }
 
@@ -942,38 +1159,43 @@ namespace librobotics {
         int smallCorrCnt;
     };
 
-    template <typename T>
+    template <typename T, typename T2>
     bool lrf_psm(const pose2<T>& refRobotPose,
                  const pose2<T>& refLaserPose,
-                 const std::vector<T>& refScanRanges,
-                 const std::vector<unsigned char> refbad,
-                 const std::vector<int> refseg,
+                 const std::vector<T2>& refScanRanges,
+                 const std::vector<unsigned int>& refbad,
+                 const std::vector<int>& refseg,
                  const pose2<T>& actRobotPose,
                  const pose2<T>& actLaserPose,
-                 const std::vector<T>& actScanRanges,
-                 const std::vector<unsigned char> actbad,
-                 const std::vector<int> actseg,
-                 pose2<T>& relLaserPose,           //scan match result
-                 pose2<T>& relRobotPose,           //scan match result
+                 const std::vector<T2>& actScanRanges,
+                 const std::vector<unsigned int>& actbad,
+                 const std::vector<int>& actseg,
                  const std::vector<T>& pm_fi,      //angle lookup table
                  const std::vector<T>& pm_co,      //cosine lookup table
                  const std::vector<T>& pm_si,      //sine lookup table
-                 const lrf_psm_cfg& cfg = lrf_psm_cfg())
+                 const lrf_psm_cfg& cfg,
+                 pose2<T>& relLaserPose,           //scan match result
+                 pose2<T>& relRobotPose)           //scan match result)
     {
-        vec2<T> relRbPose = (actRobotPose.p - refRobotPose.p).rot(-refRobotPose.a);
+        vec2<T> relRbPose = refRobotPose.vec_to(actRobotPose).rot(-refRobotPose.a);
         T relRbTheta = actRobotPose.a -refRobotPose.a;
 
         //transformation of actual scan laser scanner coordinates into reference
         //laser scanner coordinates
-        vec2<T> actLrfPose = relRbPose + actLaserPose.p.rot(relRbTheta);
+        vec2<T> actLrfPose = relRbPose + actLaserPose.vec().rot(relRbTheta);
         T actLrfTheta = relRbTheta + actLaserPose.a;
 
-        vec2<T> relLrfPose = actLrfPose - refLaserPose.p;
-        T relLrfTheta = norm_a(actLrfTheta - refLaserPose.a);
+        vec2<T> relLrfPose = actLrfPose - refLaserPose.vec();
+        T relLrfTheta = norm_a_rad(actLrfTheta - refLaserPose.a);
+
+        PRINTVAR(refRobotPose);
+        PRINTVAR(actRobotPose);
+        PRINTVAR(relLrfPose);
+        PRINTVAR(relLrfTheta);
 
 
-        std::vector<T> refranges(refScanRanges);
-        std::vector<T> actranges(actScanRanges);
+        std::vector<T2> refranges(refScanRanges);
+        std::vector<T2> actranges(actScanRanges);
 
         //some variables
         size_t nPts = refranges.size();
@@ -1235,8 +1457,8 @@ namespace librobotics {
             ay += dy;
         }//while
 
-        relLaserPose.p.x = ax;
-        relLaserPose.p.y = ay;
+        relLaserPose.x = ax;
+        relLaserPose.y = ay;
         relLaserPose.a = ath;
         return true;
     }
