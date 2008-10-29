@@ -50,6 +50,7 @@
 #include <list>
 #include <algorithm>
 #include <fstream>
+#include <cstdlib>
 
 /*-----------------------------------------------------------
  #
@@ -354,7 +355,7 @@ namespace librobotics {
             #ifdef librobotics_strict_warnings
                 throw LibRoboticsWarningException(message);
             #else
-                std::fprintf(stderr,"\n%s# LibRobotics Warning%s :\n%s\n",librobotics::t_red,librobotics::t_normal,message);
+                std::fprintf(stderr,"%s# LibRobotics Warning%s :\n%s\n",librobotics::t_red,librobotics::t_normal,message);
             #endif
         }
     }
@@ -668,6 +669,7 @@ namespace librobotics {
         std::ifstream log_file;
         std::string label_odo;
         std::string label_lrf;
+        std::string fn;
 
         logdata_simple_odo_lrf() : step(0) { }
 
@@ -678,6 +680,7 @@ namespace librobotics {
             open_file_with_exception(log_file, filename);
             label_odo = odo_label;
             label_lrf = lrf_label;
+            fn = filename;
         }
 
         int read_all() {
@@ -700,10 +703,9 @@ namespace librobotics {
             log_file >> tmp;
 
             if(log_file.eof()) {
-                warn("End of log file");
+                warn("End of %s", fn.c_str());
                 return false;
             }
-
 
             if(tmp.compare(label_odo) == 0) {
                 pose2<T1> p;
@@ -720,7 +722,7 @@ namespace librobotics {
                 }
                 lrf.push_back(ranges);
             } else {
-                warn("Uninterpretable line with label: %s ", tmp.c_str());
+                warn("Uninterpretable line with label: %s in %s", tmp.c_str(), fn.c_str());
                 return false;
             }
             return true;
@@ -1145,12 +1147,15 @@ namespace librobotics {
 
     typedef struct lrf_psm_cfg {
         lrf_psm_cfg() :
-            maxError(500), searchWndAngle(DEG2RAD(20)),
+            maxError(1000),
+            maxDriftError(700),
+            searchWndAngle(DEG2RAD(20)),
             lrfMaxRange(4000), lrfMinRange(100),
             minValidPts(50), maxIter(20), smallCorrCnt(5)
         { }
 
         double maxError;
+        double maxDriftError;
         double searchWndAngle;
         double lrfMaxRange;
         double lrfMinRange;
@@ -1175,7 +1180,8 @@ namespace librobotics {
                  const std::vector<T>& pm_si,      //sine lookup table
                  const lrf_psm_cfg& cfg,
                  pose2<T>& relLaserPose,           //scan match result
-                 pose2<T>& relRobotPose)           //scan match result)
+                 pose2<T>& relRobotPose,
+                 bool forceCheck = true)           //scan match result)
     {
         vec2<T> relRbPose = refRobotPose.vec_to(actRobotPose).rot(-refRobotPose.a);
         T relRbTheta = actRobotPose.a -refRobotPose.a;
@@ -1187,12 +1193,6 @@ namespace librobotics {
 
         vec2<T> relLrfPose = actLrfPose - refLaserPose.vec();
         T relLrfTheta = norm_a_rad(actLrfTheta - refLaserPose.a);
-
-        PRINTVAR(refRobotPose);
-        PRINTVAR(actRobotPose);
-        PRINTVAR(relLrfPose);
-        PRINTVAR(relLrfTheta);
-
 
         std::vector<T2> refranges(refScanRanges);
         std::vector<T2> actranges(actScanRanges);
@@ -1219,7 +1219,11 @@ namespace librobotics {
 
         while((++iter < cfg.maxIter) && (small_corr_cnt < cfg.smallCorrCnt)) {
             T corr = fabs(dx)+fabs(dy)+fabs(dth);
-            if(corr < 0.001) {
+
+            std::cout << std::endl;
+            PRINTVAR(iter);
+
+            if(corr < 1) {
                 small_corr_cnt++;
             }
             else
@@ -1326,7 +1330,8 @@ namespace librobotics {
                     max_i = MIN2(nPts, nPts-di);
                     for(ii = min_i; ii < max_i; ii++)//searching through the actual points
                     {
-                        if((new_bad[ii] == 0) && (refbad[ii+di] == 0))
+                        if((new_bad[ii] == 0) &&
+                           (refbad[ii+di] == 0))
                         {
                             dr = fabs(new_r[ii]-refranges[ii+di]);
                             e += dr;
@@ -1338,7 +1343,6 @@ namespace librobotics {
                         err.push_back(e/n);
                     else
                         err.push_back(1e6); //very large error
-
                     beta.push_back(di*angleStep);
                 }//for di
 
@@ -1357,10 +1361,18 @@ namespace librobotics {
                 if(err[imin] >= 1e6)
                 {
                     warn("Polar Match: orientation search failed: %f", err[imin]);
-                    return false;
+                    dx = 10;
+                    dy = 10;
+                    if(forceCheck) {
+                        warn("Polar Match: force check");
+                        continue;
+                    }
+                    else
+                        return false;
                 } else {
                     dth = beta[imin];
-                    if(imin >= 1 && (imin < (int)(beta.size()-1))) //is it not on the extreme?
+                    if(imin >= 1 && (imin < (int)(beta.size()-1)) &&
+                       err[imin-1] < 1e6 && err[imin+1] < 1e6 ) //is it not on the extreme?
                     {//lets try interpolation
                         T D = err[imin-1] + err[imin+1] - 2.0*err[imin];
                         T d = 1000;
@@ -1369,11 +1381,10 @@ namespace librobotics {
                            (err[imin+1] > err[imin]))
                         {
                             d = ((err[imin-1] - err[imin+1]) / D) / 2.0;
-                            warn("ORIENTATION REFINEMENT: %d ", d);
+                            //warn("ORIENTATION REFINEMENT: %d ", d);
                         }
-
                         if(fabs(d) < 1) {
-                            dth += DEG2RAD(d);
+                            dth += d * angleStep;
                         }
                         ath += dth;
                     }
@@ -1382,8 +1393,8 @@ namespace librobotics {
             }//if
 
             //-----------------translation-------------
-            T C = 70*70;
-            if(iter > 10) C = 100;
+            T C = 700*700;
+            if(iter > 10) C = 1000;
             // do the weighted linear regression on the linearized ...
             // include angle as well
             T hi1, hi2, hwi1, hwi2, hw1 = 0, hw2 = 0, hwh11 = 0;
@@ -1395,15 +1406,16 @@ namespace librobotics {
                 dr = refranges[i] - new_r[i];
 
                 //weight calculation
-                if (refbad[i] == 0 && new_bad[i] == 0 &&
+                if (refbad[i] == 0 &&
+                    new_bad[i] == 0 &&
                     refranges[i] > 0 &&
                     new_r[i] > 0 &&
                     new_r[i] < cfg.lrfMaxRange &&
                     new_r[i] > cfg.lrfMinRange &&
                     fabs(dr) < cfg.maxError )
                 {
-                    abs_err += fabs(dr);
                     n++;
+                    abs_err += fabs(dr);
                     w = C / (dr * dr + C);
 
                     //proper calculations of the jacobian
@@ -1420,18 +1432,22 @@ namespace librobotics {
                     //H^t*W*H
                     hwh11 += hwi1 * hi1;
                     hwh12 += hwi1 * hi2;
-                    //        hwh21 += hwi2*hi1; //should take adv. of symmetricity!!
+                    //hwh21 += hwi2*hi1; //should take adv. of symmetricity!!
                     hwh22 += hwi2 * hi2;
                 }
             }//for i
 
             if(n < cfg.minValidPts) {
+                warn("pm_linearized_match: ERROR not enough points: %d", n);
                 dx = 10;
                 dy = 10;
-                warn("pm_linearized_match: ERROR not enough points: %d", n);
-                return false;
+                if(forceCheck){
+                    warn("Polar Match: force check");
+                    continue;
+                }
+                else
+                    return false;
             }
-
 
             //calculation of inverse
             T D;//determinant
@@ -1439,10 +1455,15 @@ namespace librobotics {
             D = (hwh11*hwh22) - (hwh12*hwh21);
             if(D < 0.001)
             {
-                dx = 10;
-                dy = 10;
                 warn("pm_linearized_match: ERROR determinant to small: %f", D);
-                return false;
+                dy = 10;
+                dy = 10;
+                if(forceCheck){
+                    warn("Polar Match: force check");
+                    continue;
+                }
+                else
+                    return false;
             }
 
             inv11 =  hwh22/D;
@@ -1460,6 +1481,9 @@ namespace librobotics {
         relLaserPose.x = ax;
         relLaserPose.y = ay;
         relLaserPose.a = ath;
+
+#warning "!!!relRobotPose still not compute!!!"
+
         return true;
     }
 
