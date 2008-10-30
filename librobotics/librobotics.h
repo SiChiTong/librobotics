@@ -1208,8 +1208,9 @@ namespace librobotics {
     void lrf_draw_scan_point_to_cimg(const std::vector<vec2<T1> >& scan_point,
                                      cimg_library::CImg<T2>& img,
                                      const T2 color[],
-                                     float scale = 0.1,
                                      bool draw_line = false,
+                                     float scale = 0.1,
+                                     pose2<T1> offset = pose2<T1>(),
                                      bool flip_x = false,
                                      bool flip_y = true)
     {
@@ -1221,11 +1222,16 @@ namespace librobotics {
         int yoffset = dimy/2;
 
         CImgList<T1> points;
+        vec2<T1> tmp;
         for(size_t  i = 0; i < scan_point.size(); i++) {
-            T1 x = scan_point[i].x;
+            if((offset.x == offset.y) && (offset.y == offset.a) && (offset.a == 0))
+                tmp = scan_point[i];
+            else
+                tmp = scan_point[i].rot(offset.a) + offset.vec();
+            T1 x = tmp.x;
             if(flip_x) x = -x;
             x = x * scale + xoffset;
-            T1 y = scan_point[i].y;
+            T1 y = tmp.y;
             if(flip_y) y = -y;
             y = y * scale + yoffset;
             points.push_back(CImg<>::vector(x, y));
