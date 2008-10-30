@@ -5,12 +5,14 @@
  *      Author: chang
  */
 
+#if 0
+
 #include <iostream>
 #include "../librobotics.h"
 using namespace std;
 using namespace librobotics;
 
-#if 0
+
 
 int main() {
     librobotics::info();

@@ -5,6 +5,8 @@
  *      Author: chang
  */
 
+#if 0
+
 #include <iostream>
 #include "../librobotics.h"
 using namespace std;
@@ -12,8 +14,16 @@ using namespace librobotics;
 
 #define MEDIAN_WND 3
 #define SEG_THRES   100
+#define MAX_RANGE 4000
+#define MIN_RANGE 400
 
-int main() {
+int main(int argc, char* argv[]) {
+    if(argc < 2) {
+        cout << "Please enter log file" << endl;
+        return -1;
+    }
+
+
     logdata_simple_odo_lrf<double, int> ref_log;
     logdata_simple_odo_lrf<double, int> act_log;
 
@@ -25,7 +35,7 @@ int main() {
 
     psmcfg.maxError = 1200;
 //    psmcfg.maxDriftError = 700;
-    psmcfg.searchWndAngle = DEG2RAD(40);
+    psmcfg.searchWndAngle = DEG2RAD(20);
     psmcfg.lrfMaxRange = 3000;
 //    psmcfg.lrfMinRange;
     psmcfg.minValidPts = 30;
@@ -50,8 +60,8 @@ int main() {
 
 
     try {
-        ref_log.open("../log/log_door_open_lower_lrf.log");
-        act_log.open("../log/log_lower_center_line_0_+30cm.log");
+        ref_log.open("../log/scan_match_test/log_door_open_lower_lrf_modify.log", "Odometry", "Laser");
+        act_log.open(argv[1], "Odometry", "Laser");
         act_log.read_all();
         ref_log.read_all();
     } catch (LibRoboticsException& e) {
@@ -64,16 +74,15 @@ int main() {
 
 
 
-//    lrf_save_to_file("door_open_lower_lrf_raw.csv", ref_log.lrf[0]);
+    lrf_save_to_file("door_open_lower_lrf_raw.csv", ref_log.lrf[0]);
     ref_lrf = ref_log.lrf[0];
     lrf_range_median_filter(ref_lrf, MEDIAN_WND);
-    lrf_range_threshold(ref_lrf, refbad, 500, 0, 3000, 0);
+    lrf_range_threshold(ref_lrf, refbad, MIN_RANGE, 0, MAX_RANGE, 0);
     lrf_range_segment(ref_lrf, refseg, SEG_THRES);
 //    lrf_save_to_file("door_open_lower_lrf_filtered.csv", ref_lrf);
 
 
     int step = 0;
-    char fn[256];
     pose2d relLaserPose, relRobotPose;
     while(step < act_log.step) {
         cout << "========== start ==========" << endl;
@@ -84,7 +93,7 @@ int main() {
 
         act_lrf = act_log.lrf[step];
         lrf_range_median_filter(act_lrf, MEDIAN_WND);
-        lrf_range_threshold(act_lrf, actbad, 500, 0, 3000, 0);
+        lrf_range_threshold(act_lrf, actbad, MIN_RANGE, 0, MAX_RANGE, 0);
         lrf_range_segment(act_lrf, actseg, SEG_THRES);
 
         bool ok = lrf_psm(pose2d(0.0, 0.0, 0.0),
@@ -143,3 +152,5 @@ int main() {
     return 0;
 
 }
+
+#endif
