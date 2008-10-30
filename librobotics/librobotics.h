@@ -674,8 +674,8 @@ namespace librobotics {
         logdata_simple_odo_lrf() : step(0) { }
 
         void open(const std::string& filename,
-                  const std::string& odo_label = "Odometry",
-                  const std::string& lrf_label = "Laser")
+                  const std::string& odo_label,
+                  const std::string& lrf_label)
         {
             open_file_with_exception(log_file, filename);
             label_odo = odo_label;
@@ -727,6 +727,86 @@ namespace librobotics {
             }
             return true;
         }
+    };
+
+    template<typename T1, typename T2> struct logdata_simple_odo_n_lrf {
+        std::vector<pose2<T1> > odo;
+        std::vector<std::vector<std::vector<T2> > > n_lrf;
+        int num_lrf;
+        int step;
+        std::ifstream log_file;
+        std::string label_odo;
+        std::vector<std::string> label_n_lrf;
+        std::string fn;
+
+        logdata_simple_odo_n_lrf() : step(0) { }
+
+        void open(const std::string& filename,
+                  int lrf_num,
+                  const std::string& odo_label,
+                  const std::vector<std::string>& lrf_labels)
+        {
+            open_file_with_exception(log_file, filename);
+            num_lrf = lrf_num;
+            label_odo = odo_label;
+            label_n_lrf = lrf_labels;
+            fn = filename;
+            n_lrf.resize(lrf_num);
+        }
+
+        int read_all() {
+            while(read_one_step()) { }
+            return step;
+        }
+
+        bool read_one_step() {
+            for(int i = 0; i < (1 + num_lrf); i++) {
+                if(!read_one_line())
+                    return false;
+            }
+            step++;
+            return true;
+        }
+
+
+        bool read_one_line() {
+           //get label
+           std::string tmp;
+           log_file >> tmp;
+
+           if(log_file.eof()) {
+               warn("End of %s", fn.c_str());
+               return false;
+           }
+
+           if(tmp.compare(label_odo) == 0) {
+               pose2<T1> p;
+               log_file >> p;
+               p.a = norm_a_rad(p.a);
+               odo.push_back(p);
+           } else {
+               int lrf_id = -1;
+               for(int i = 0; i < num_lrf; i++) {
+                   //check label
+                   if(tmp.compare(label_n_lrf[i]) == 0)
+                       lrf_id = i;
+               }
+
+               if(lrf_id >= 0) {
+                   int max;
+                   log_file >> max;
+                   std::vector<T2> ranges(max);
+                   for (int i = 0; i < max; i++) {
+                       log_file >> ranges[i];
+                   }
+                   n_lrf[lrf_id].push_back(ranges);
+               } else {
+                   warn("Uninterpretable line with label: %s in %s", tmp.c_str(), fn.c_str());
+                   return false;
+               }
+           }
+           return true;
+       }
     };
 
 
@@ -830,24 +910,24 @@ namespace librobotics {
     }
 
     template<typename T1, typename T2>
-    void lrf_scan_range_from_scan_pose(const std::vector<vec2<T1> >& scanPose,
+    void lrf_scan_range_from_scan_point(const std::vector<vec2<T1> >& scan_point,
                              std::vector<T2>& ranges,
                              T2 convert = 1.0)
     {
-        if(ranges.size() != scanPose.size()) {
+        if(ranges.size() != scan_point.size()) {
             librobotics::warn("scanPose and ranges size are not match");
         }
 
-        for(size_t i = 0; (i < scanPose.size()) && (i < ranges.size()); i++ ) {
-            ranges[i] = (T2)scanPose[i].size() * convert;
+        for(size_t i = 0; (i < scan_point.size()) && (i < ranges.size()); i++ ) {
+            ranges[i] = (T2)scan_point[i].size() * convert;
         }
     }
 
     template<typename T1, typename T2, typename T3>
-    void lrf_scan_pose_from_scan_range(const std::vector<T1>& ranges,
+    void lrf_scan_point_from_scan_range(const std::vector<T1>& ranges,
                                        const std::vector<T2>& cosTable,
                                        const std::vector<T2>& sinTable,
-                                       std::vector<vec2<T3> >& scanPose,
+                                       std::vector<vec2<T3> >& scan_point,
                                        int step = 1,
                                        bool flip = false)
     {
@@ -856,32 +936,36 @@ namespace librobotics {
             throw librobotics::LibRoboticsRuntimeException("cos/sin table size are not match");
         }
 
+        if(scan_point.size() != nPts) {
+            scan_point.resize(nPts);
+        }
+
         vec2<T3> tmp;
         int idx = 0;
         int j = 0;
         for(size_t i = 0; i < nPts; i+=step ) {
             idx = (!flip) ? i : ((nPts - 1) - i);
-            scanPose[j].x = ranges[i] * cosTable[idx];
-            scanPose[j].y = ranges[i] * sinTable[idx];
+            scan_point[j].x = ranges[i] * cosTable[idx];
+            scan_point[j].y = ranges[i] * sinTable[idx];
             j++;
         }
     }
 
     template<typename T1, typename T2>
-    void lrf_scan_pose_to_global_pose(std::vector<vec2<T1> >& scanPose,
+    void lrf_scan_point_to_global_pose(std::vector<vec2<T1> >& scan_point,
                                       pose2<T2> lrf_offset,
                                       pose2<T2> global_pose)
     {
-        if(scanPose.size() == 0) {
-            librobotics::warn("size of scanPose is 0");
+        if(scan_point.size() == 0) {
+            librobotics::warn("size of scan_point is 0");
             return;
         }
 
-        for(size_t i = 0; i < scanPose.size(); i++ ) {
-            scanPose[i].rotate(lrf_offset.a);
-            scanPose[i] += lrf_offset.vec();
-            scanPose[i].rotate(global_pose.a);
-            scanPose[i] += global_pose.vec();
+        for(size_t i = 0; i < scan_point.size(); i++ ) {
+            scan_point[i].rotate(lrf_offset.a);
+            scan_point[i] += lrf_offset.vec();
+            scan_point[i].rotate(global_pose.a);
+            scan_point[i] += global_pose.vec();
         }
 
     }
@@ -970,6 +1054,24 @@ namespace librobotics {
                 bad[i] = ERR_RANGE;
             } else {
                 bad[i] = NO_ERROR;
+            }
+        }
+    }
+
+    template<typename T>
+    void lrf_range_check(std::vector<T>& ranges,
+                         T IS_MAX_RANGE_VALUE, T MAX_RANGE_VALUE,
+                         T newMaxRangeValue,
+                         T BAD_RANGE,
+                         T newBadRangeValue)
+    {
+        for(size_t i = 0; i < ranges.size(); i++ ) {
+            if((ranges[i] == IS_MAX_RANGE_VALUE) || (ranges[i] > MAX_RANGE_VALUE)) {
+                ranges[i] = newMaxRangeValue;
+            } else {
+                if(ranges[i] <= BAD_RANGE) {
+                    ranges[i] = newBadRangeValue;
+                }
             }
         }
     }
@@ -1081,7 +1183,7 @@ namespace librobotics {
 
     template<typename T>
     void lrf_save_to_file(const std::string& filename,
-                          const std::vector<vec2<T> > lrf_pts,
+                          const std::vector<vec2<T> >& lrf_pts,
                           const std::string& sperator = ",")
     {
         std::ofstream file;
@@ -1101,6 +1203,42 @@ namespace librobotics {
 
     }
 
+#ifdef librobotics_use_cimg
+    template<typename T1, typename T2>
+    void lrf_draw_scan_point_to_cimg(const std::vector<vec2<T1> >& scan_point,
+                                     cimg_library::CImg<T2>& img,
+                                     const T2 color[],
+                                     float scale = 0.1,
+                                     bool draw_line = false,
+                                     bool flip_x = false,
+                                     bool flip_y = true)
+    {
+        using namespace cimg_library;
+
+        int dimx = img.dimx();
+        int dimy = img.dimy();
+        int xoffset = dimx/2;
+        int yoffset = dimy/2;
+
+        CImgList<T1> points;
+        for(size_t  i = 0; i < scan_point.size(); i++) {
+            T1 x = scan_point[i].x;
+            if(flip_x) x = -x;
+            x = x * scale + xoffset;
+            T1 y = scan_point[i].y;
+            if(flip_y) y = -y;
+            y = y * scale + yoffset;
+            points.push_back(CImg<>::vector(x, y));
+        }
+
+        if(draw_line) {
+            img.draw_line(points, color);
+        } else {
+            img.draw_point(points, color);
+        }
+    }
+
+#endif
     /*--------------------------------------------------------------------------------
      *
      * Definition of the LibRobotics: 2D Measurement and Motion Model
@@ -1147,21 +1285,25 @@ namespace librobotics {
 
     typedef struct lrf_psm_cfg {
         lrf_psm_cfg() :
-            maxError(1000),
-            maxDriftError(700),
+            scale(1000),        //scale factor from 1 m
+            maxError(1*scale),
             searchWndAngle(DEG2RAD(20)),
-            lrfMaxRange(4000), lrfMinRange(100),
-            minValidPts(50), maxIter(20), smallCorrCnt(5)
-        { }
+            lrfMaxRange(4*scale),
+            lrfMinRange(0.1*scale),
+            minValidPts(50),
+            maxIter(20),
+            smallCorrCnt(5)
 
+        { }
+        double scale;
         double maxError;
-        double maxDriftError;
         double searchWndAngle;
         double lrfMaxRange;
         double lrfMinRange;
         int minValidPts;
         int maxIter;
         int smallCorrCnt;
+
     };
 
     template <typename T, typename T2>
@@ -1216,14 +1358,15 @@ namespace librobotics {
         T ri = 0;
         int idx = 0;
         size_t i = 0;
+        T C = SQR(0.7 * cfg.scale);
 
         while((++iter < cfg.maxIter) && (small_corr_cnt < cfg.smallCorrCnt)) {
+
+            if(iter > 10) C = (1 * cfg.scale);
+
             T corr = fabs(dx)+fabs(dy)+fabs(dth);
 
-            std::cout << std::endl;
-            PRINTVAR(iter);
-
-            if(corr < 1) {
+            if(corr < (0.001 * cfg.scale)) {
                 small_corr_cnt++;
             }
             else
@@ -1360,11 +1503,11 @@ namespace librobotics {
 
                 if(err[imin] >= 1e6)
                 {
-                    warn("Polar Match: orientation search failed: %f", err[imin]);
+                    warn("lrf_psm: orientation search failed: %f", err[imin]);
                     dx = 10;
                     dy = 10;
                     if(forceCheck) {
-                        warn("Polar Match: force check");
+                        warn("lrf_psm: force check");
                         continue;
                     }
                     else
@@ -1381,7 +1524,7 @@ namespace librobotics {
                            (err[imin+1] > err[imin]))
                         {
                             d = ((err[imin-1] - err[imin+1]) / D) / 2.0;
-                            //warn("ORIENTATION REFINEMENT: %d ", d);
+                            warn("lrf_psm: Orientation refinement: %f ", d);
                         }
                         if(fabs(d) < 1) {
                             dth += d * angleStep;
@@ -1393,8 +1536,6 @@ namespace librobotics {
             }//if
 
             //-----------------translation-------------
-            T C = 700*700;
-            if(iter > 10) C = 1000;
             // do the weighted linear regression on the linearized ...
             // include angle as well
             T hi1, hi2, hwi1, hwi2, hw1 = 0, hw2 = 0, hwh11 = 0;
@@ -1438,7 +1579,7 @@ namespace librobotics {
             }//for i
 
             if(n < cfg.minValidPts) {
-                warn("pm_linearized_match: ERROR not enough points: %d", n);
+                warn("lrf_psm: Not enough points for linearize: %d", n);
                 dx = 10;
                 dy = 10;
                 if(forceCheck){
@@ -1455,11 +1596,11 @@ namespace librobotics {
             D = (hwh11*hwh22) - (hwh12*hwh21);
             if(D < 0.001)
             {
-                warn("pm_linearized_match: ERROR determinant to small: %f", D);
+                warn("lrf_psm: Determinant too small: %f", D);
                 dy = 10;
                 dy = 10;
                 if(forceCheck){
-                    warn("Polar Match: force check");
+                    warn("lrf_psm: force check");
                     continue;
                 }
                 else
@@ -1482,7 +1623,7 @@ namespace librobotics {
         relLaserPose.y = ay;
         relLaserPose.a = ath;
 
-#warning "!!!relRobotPose still not compute!!!"
+#warning "!!!lrf_psm: relRobotPose still not compute!!!"
 
         return true;
     }
