@@ -198,10 +198,10 @@
 
 //compare
 #define MIN2(a, b)          (((a) <= (b)) ? (a) : (b))
-#define MIN(a, b)           (((a) <= (b)) ? (a) : (b))
+#define MIN2_BOOL(a, b)      (((a) <= (b)) ? true : false)
 #define MIN3(a, b, c)       (MIN2(MIN2(a,b), c))
 #define MAX2(a, b)          (((a) >= (b)) ? (a) : (b))
-#define MAX(a, b)           (((a) >= (b)) ? (a) : (b))
+#define MAX2_BOOL(a, b)      (((a) >= (b)) ? true : false)
 #define MAX3(a, b, c)       (MAX2(MAX2(a,b), c))
 
 //angle normalize function
@@ -722,8 +722,7 @@ namespace librobotics {
                 }
                 lrf.push_back(ranges);
             } else {
-                warn("Uninterpretable line with label: %s in %s", tmp.c_str(), fn.c_str());
-                return false;
+                throw LibRoboticsRuntimeException("Uninterpretable line with label: %s in %s", tmp.c_str(), fn.c_str());
             }
             return true;
         }
@@ -796,13 +795,15 @@ namespace librobotics {
                    int max;
                    log_file >> max;
                    std::vector<T2> ranges(max);
-                   for (int i = 0; i < max; i++) {
+
+                   int i = 0;
+                   for (i = 0; i < max; i++) {
                        log_file >> ranges[i];
                    }
+
                    n_lrf[lrf_id].push_back(ranges);
                } else {
-                   warn("Uninterpretable line with label: %s in %s", tmp.c_str(), fn.c_str());
-                   return false;
+                   throw LibRoboticsRuntimeException("Uninterpretable line with label: %s in %s", tmp.c_str(), fn.c_str());
                }
            }
            return true;
@@ -1350,7 +1351,7 @@ namespace librobotics {
         std::vector<T> r(nPts, 0);
         std::vector<T> fi(nPts, 0);
         std::vector<T> new_r(nPts, 0);
-        std::vector<unsigned char> new_bad(nPts, ERR_EMPTY);
+        std::vector<unsigned int> new_bad(nPts, ERR_EMPTY);
         std::vector<int> index(nPts, 0);
 
         double angleStep = pm_fi[1] - pm_fi[0];
@@ -1473,6 +1474,7 @@ namespace librobotics {
                 int min_i = 0, max_i = 0;
                 int wnd = (int)(cfg.searchWndAngle / angleStep);
                 T dr;
+
                 for(int di = -wnd ; di <= wnd; di++) {
                     n = 0; e = 0;
                     min_i = MAX2(-di, 0);
@@ -1530,7 +1532,7 @@ namespace librobotics {
                            (err[imin+1] > err[imin]))
                         {
                             d = ((err[imin-1] - err[imin+1]) / D) / 2.0;
-                            warn("lrf_psm: Orientation refinement: %f ", d);
+//                            warn("lrf_psm: Orientation refinement: %f ", d);
                         }
                         if(fabs(d) < 1) {
                             dth += d * angleStep;

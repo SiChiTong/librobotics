@@ -60,7 +60,7 @@ int main(int argc, char* argv[]) {
 
 
     try {
-        ref_log.open("../log/scan_match_test/log_door_open_lower_lrf_modify.log", "Odometry", "Laser");
+        ref_log.open("../log/psm_test_lower_lrf_open_door/log_door_open_lower_lrf_modify.log", "Odometry", "Laser");
         act_log.open(argv[1], "Odometry", "Laser");
         act_log.read_all();
         ref_log.read_all();
@@ -118,22 +118,22 @@ int main(int argc, char* argv[]) {
         }
 
         //ref pose
-        lrf_scan_pose_from_scan_range(ref_lrf, co, si, ref_lrf_pose);
+        lrf_scan_point_from_scan_range(ref_lrf, co, si, ref_lrf_pose);
         lrf_save_to_file("ref_lrf_pose.csv", ref_lrf_pose);
-        lrf_scan_pose_to_global_pose(ref_lrf_pose, pose2d(140.0, 0.0, 0.0), pose2d());
+        lrf_scan_point_to_global_pose(ref_lrf_pose, pose2d(140.0, 0.0, 0.0), pose2d());
         lrf_save_to_file("ref_lrf_pose_move.dat", ref_lrf_pose, " ");
 
         //act pose
-        lrf_scan_pose_from_scan_range(act_lrf, co, si, act_lrf_pose);
+        lrf_scan_point_from_scan_range(act_lrf, co, si, act_lrf_pose);
         lrf_save_to_file("act_lrf_pose.csv", act_lrf_pose);
         //lrf_scan_pose_to_global_pose(act_lrf_pose, pose2d(140.0, 0.0, 0.0), act_log.odo[step] * 1000);
-        lrf_scan_pose_to_global_pose(act_lrf_pose, pose2d(140.0, 0.0, 0.0), pose2d());
+        lrf_scan_point_to_global_pose(act_lrf_pose, pose2d(140.0, 0.0, 0.0), pose2d());
         lrf_save_to_file("act_lrf_pose_move.dat", act_lrf_pose, " ");
 
         //psm pose
-        lrf_scan_pose_from_scan_range(act_lrf, co, si, psm_lrf_pose);
+        lrf_scan_point_from_scan_range(act_lrf, co, si, psm_lrf_pose);
         lrf_save_to_file("psm_lrf_pose.csv", psm_lrf_pose);
-        lrf_scan_pose_to_global_pose(psm_lrf_pose, pose2d(140.0, 0.0, 0.0), relLaserPose);
+        lrf_scan_point_to_global_pose(psm_lrf_pose, pose2d(140.0, 0.0, 0.0), relLaserPose);
         lrf_save_to_file("psm_lrf_pose_move.dat", psm_lrf_pose, " ");
 
 
