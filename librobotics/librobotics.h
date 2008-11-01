@@ -51,6 +51,7 @@
 #include <algorithm>
 #include <fstream>
 #include <cstdlib>
+#include <limits>
 
 /*-----------------------------------------------------------
  #
@@ -1290,7 +1291,7 @@ namespace librobotics {
      -----------------------------------------------------------*/
 
 
-    typedef struct lrf_psm_cfg {
+    struct lrf_psm_cfg {
         lrf_psm_cfg() :
             scale(1000),        //scale factor from 1 m
             maxError(1*scale),
