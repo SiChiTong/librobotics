@@ -52,6 +52,7 @@
 #include <fstream>
 #include <cstdlib>
 #include <limits>
+#include <iostream>
 
 /*-----------------------------------------------------------
  #
@@ -223,10 +224,10 @@ T inline norm_a_deg(T a) {
 }
 
 //simple print function
-#define PRINTVAR(x)         (std::cout << #x << ":" << (x) << std::endl)
-#define PRINTVALUE(x)       (std::cout << (x) << std::endl)
+#define PRINTVAR(x)         (std::cout << #x << ":" << (x) << "\n")
+#define PRINTVALUE(x)       (std::cout << (x) << "\n")
 #define PRINTVEC(x)         for(uint idx = 0; idx < x.size(); idx++) { \
-                                std::cout << idx << "," << x[idx] << std::endl; \
+                                std::cout << idx << "," << x[idx] << "\n"; \
                             }
 
 //open file
@@ -809,6 +810,91 @@ namespace librobotics {
            }
            return true;
        }
+    };
+
+    template <typename T1, typename T2> struct logdata_buggy_robot {
+    	struct buggy_odo {
+    		T1 ds, da, a;
+    	};
+    	struct buggy_gps {
+    		T1 x, y, a, v;
+    		int step;
+    	};
+    	std::vector<buggy_odo>	odo;
+    	std::vector<std::vector<T2> > lrf;
+    	std::vector<buggy_gps> gps;
+    	int step;
+    	std::ifstream log_file;
+    	std::string fn;
+    	bool is_gps;
+
+    	logdata_buggy_robot() : step(0), is_gps(false) { }
+
+        void open(const std::string& filename) {
+            open_file_with_exception(log_file, filename);
+            fn = filename;
+        }
+
+        int read_all() {
+             while(read_one_step()) { }
+             return step;
+        }
+
+        bool read_one_step() {
+            for(int i = 0; i < 20; i++) {
+                if(!read_one_line())
+                    return false;
+            }
+            if(!read_one_line())
+                return false;
+            if(!is_gps) {
+                return false;
+            }
+            is_gps = false;
+            step++;
+            return true;
+        }
+
+    	bool read_one_line() {
+            //get label
+            std::string tmp;
+            log_file >> tmp;
+
+            if(log_file.eof()) {
+            	warn("End of %s", fn.c_str());
+            	return false;
+            }
+
+            if(tmp.compare("Odo") == 0) {
+            	buggy_odo odo_tmp;
+            	log_file >> odo_tmp.ds;
+            	log_file >> odo_tmp.da;
+            	log_file >> odo_tmp.a;
+            	if(odo_tmp.a < 0) odo_tmp.a += 2*M_PI;
+            	odo.push_back(odo_tmp);
+            } else
+            if(tmp.compare("Laser") == 0) {
+            	int max;
+				log_file >> max;
+				std::vector<T2> ranges(max);
+				for (int i = 0; i < max; i++) {
+					log_file >> ranges[i];
+				}
+				lrf.push_back(ranges);
+            } else
+            if(tmp.compare("GPS") == 0) {
+                buggy_gps gps_tmp;
+				log_file >> gps_tmp.x;
+				log_file >> gps_tmp.y;
+				log_file >> gps_tmp.a;
+				log_file >> gps_tmp.v;
+				gps.push_back(gps_tmp);
+				is_gps = true;
+            } else {
+                throw LibRoboticsRuntimeException("Uninterpretable line with label: %s in %s", tmp.c_str(), fn.c_str());
+            }
+            return true;
+    	}
     };
 
 
