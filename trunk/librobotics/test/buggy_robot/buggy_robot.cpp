@@ -5,6 +5,7 @@
  *      Author: mahisorn
  */
 
+#if 0
 #include <iostream>
 
 #include <CImg.h>
@@ -172,3 +173,6 @@ int main (int argc, char* argv[]) {
 
 
 }
+
+
+#endif
