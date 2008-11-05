@@ -5,7 +5,7 @@
  *      Author: chang
  */
 
-#if 0
+#if 1
 #include <iostream>
 
 #include <CImg.h>
