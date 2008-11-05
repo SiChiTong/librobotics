@@ -49,10 +49,12 @@
 #include <vector>
 #include <list>
 #include <algorithm>
+#include <iostream>
 #include <fstream>
 #include <cstdlib>
 #include <limits>
 #include <iostream>
+
 
 /*-----------------------------------------------------------
  #
@@ -662,6 +664,52 @@ namespace librobotics {
      * (http://carmen.sourceforge.net)
      *
      -------------------------------------------------------*/
+
+    template<typename T> struct logdata_simple_lrf {
+        std::vector<std::vector<T> > lrf;
+        int step;
+        std::ifstream log_file;
+        std::string label_lrf;
+        std::string fn;
+
+        logdata_simple_lrf() : step(0) { }
+        void open(const std::string& filename,
+                  const std::string& lrf_label)
+        {
+            open_file_with_exception(log_file, filename);
+            label_lrf = lrf_label;
+            fn = filename;
+        }
+
+        int read_all() {
+            while(read_one_line()) {step++;}
+            return step;
+        }
+
+        bool read_one_line() {
+            //get label
+            std::string tmp;
+            log_file >> tmp;
+
+            if(log_file.eof()) {
+                warn("End of %s", fn.c_str());
+                return false;
+            }
+
+            if(tmp.compare(label_lrf) == 0) {
+                int max;
+                log_file >> max;
+                std::vector<T> ranges(max);
+                for (int i = 0; i < max; i++) {
+                    log_file >> ranges[i];
+                }
+                lrf.push_back(ranges);
+            } else {
+                throw LibRoboticsRuntimeException("Uninterpretable line with label: %s in %s", tmp.c_str(), fn.c_str());
+            }
+            return true;
+        }
+    };
 
 
     template<typename T1, typename T2> struct logdata_simple_odo_lrf {
