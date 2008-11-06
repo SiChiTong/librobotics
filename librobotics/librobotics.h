@@ -1875,6 +1875,39 @@ namespace librobotics {
         }
     }
 
+    namespace path_planning {
+
+        /*-------------------------------------------------------------
+         *
+         * Definition of the LibRobotics: Monte Carlo Localization MCL in 2D space
+         * (for grid map)
+         *
+         *-------------------------------------------------------------*/
+
+        namespace vfh {
+            struct simple_vfh2_cfg {
+                float max_range;
+                float A;
+                float B;
+                float angle_res;
+                int smooth_wnd_size;
+            };
+
+
+
+            template <typename T>
+            int simple_vfh2(const vec2<T>& target,
+                            const std::vector<vec2<T> >& obs,
+                            const simple_vfh2_cfg& cfg)
+            {
+
+
+                return 0;
+            }
+
+        }
+    }
+
 
 }
 
