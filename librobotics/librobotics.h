@@ -482,8 +482,18 @@ namespace librobotics {
             return (T)atan2(y,x);
         }
 
+        T theta_2PI() const {
+            T tmp = atan2(y,x);
+            if(tmp < 0) tmp += 2 * M_PI;
+            return tmp;
+        }
+
         T degree() const {
             return (T)RAD2DEG(atan2(y,x));
+        }
+
+        T degree_360() const {
+            return (T)RAD2DEG(theta_2PI());
         }
 
         bool isZero() const {
@@ -539,6 +549,7 @@ namespace librobotics {
             return is;
         }
     };
+
     typedef vec2<int> vec2i;
     typedef vec2<long> vec2l;
     typedef vec2<float> vec2f;
@@ -625,6 +636,21 @@ namespace librobotics {
     typedef bbox2<long> bbox2l;
     typedef bbox2<float> bbox2f;
     typedef bbox2<double> bbox2d;
+
+    /*-------------------------------------------------------------------------
+     *
+     * Definition of the LibRobotics: 2D vector and pose function
+     *
+     -------------------------------------------------------------------------*/
+
+    template<typename T> bool angle_compare_xy_component( const T& i, const T& j)
+    {
+        double thetai = atan2(i.y, i.x);
+        if(thetai < 0) thetai += (2*M_PI);
+        double thetaj = atan2(j.y, j.x);
+        if(thetaj < 0) thetaj += (2*M_PI);
+        return thetai < thetaj;
+    }
 
 
     /*-------------------------------------------------------------------------
@@ -1383,7 +1409,7 @@ namespace librobotics {
 #endif
     /*--------------------------------------------------------------------------------
      *
-     * Definition of the LibRobotics: 2D Measurement and Motion Model
+     * Definition of the LibRobotics: 2D Measurement and M#ifdef librobotics_use_cimgotion Model
      *
      --------------------------------------------------------------------------------*/
 
@@ -1449,37 +1475,37 @@ namespace librobotics {
     };
 
     template <typename T, typename T2>
-    bool lrf_psm(const pose2<T>& refRobotPose,
-                 const pose2<T>& refLaserPose,
-                 const std::vector<T2>& refScanRanges,
+    bool lrf_psm(const pose2<T>& ref_robot_pose,
+                 const pose2<T>& ref_laser_pose,
+                 const std::vector<T2>& ref_scan_ranges,
                  const std::vector<unsigned int>& refbad,
                  const std::vector<int>& refseg,
-                 const pose2<T>& actRobotPose,
-                 const pose2<T>& actLaserPose,
-                 const std::vector<T2>& actScanRanges,
+                 const pose2<T>& act_robot_pose,
+                 const pose2<T>& act_laser_pose,
+                 const std::vector<T2>& act_scan_ranges,
                  const std::vector<unsigned int>& actbad,
                  const std::vector<int>& actseg,
                  const std::vector<T>& pm_fi,      //angle lookup table
                  const std::vector<T>& pm_co,      //cosine lookup table
                  const std::vector<T>& pm_si,      //sine lookup table
                  const lrf_psm_cfg& cfg,
-                 pose2<T>& relLaserPose,           //scan match result
-                 pose2<T>& relRobotPose,
-                 bool forceCheck = true)           //scan match result)
+                 pose2<T>& rel_laser_pose,           //scan match result
+                 pose2<T>& rel_robot_pose,
+                 bool force_check = true)           //scan match result)
     {
-        vec2<T> relRbPose = refRobotPose.vec_to(actRobotPose).rot(-refRobotPose.a);
-        T relRbTheta = actRobotPose.a -refRobotPose.a;
+        vec2<T> relRbPose = ref_robot_pose.vec_to(act_robot_pose).rot(-ref_robot_pose.a);
+        T relRbTheta = act_robot_pose.a -ref_robot_pose.a;
 
         //transformation of actual scan laser scanner coordinates into reference
         //laser scanner coordinates
-        vec2<T> actLrfPose = relRbPose + actLaserPose.vec().rot(relRbTheta);
-        T actLrfTheta = relRbTheta + actLaserPose.a;
+        vec2<T> actLrfPose = relRbPose + act_laser_pose.vec().rot(relRbTheta);
+        T actLrfTheta = relRbTheta + act_laser_pose.a;
 
-        vec2<T> relLrfPose = actLrfPose - refLaserPose.vec();
-        T relLrfTheta = norm_a_rad(actLrfTheta - refLaserPose.a);
+        vec2<T> relLrfPose = actLrfPose - ref_laser_pose.vec();
+        T relLrfTheta = norm_a_rad(actLrfTheta - ref_laser_pose.a);
 
-        std::vector<T2> refranges(refScanRanges);
-        std::vector<T2> actranges(actScanRanges);
+        std::vector<T2> refranges(ref_scan_ranges);
+        std::vector<T2> actranges(act_scan_ranges);
 
         //some variables
         size_t nPts = refranges.size();
@@ -1519,8 +1545,8 @@ namespace librobotics {
             for(i = 0; i < nPts; i++)
             {
                 delta   = ath + pm_fi[i];
-                xr = (actScanRanges[i] * cos(delta));
-                yr = (actScanRanges[i] * sin(delta));
+                xr = (act_scan_ranges[i] * cos(delta));
+                yr = (act_scan_ranges[i] * sin(delta));
                 x       = xr + ax;
                 y       = yr + ay;
                 r[i]    = sqrt((x*x)+(y*y));
@@ -1649,7 +1675,7 @@ namespace librobotics {
                     warn("lrf_psm: orientation search failed: %f", err[imin]);
                     dx = 10;
                     dy = 10;
-                    if(forceCheck) {
+                    if(force_check) {
                         warn("lrf_psm: force check");
                         continue;
                     }
@@ -1725,7 +1751,7 @@ namespace librobotics {
                 warn("lrf_psm: Not enough points for linearize: %d", n);
                 dx = 10;
                 dy = 10;
-                if(forceCheck){
+                if(force_check){
                     warn("Polar Match: force check");
                     continue;
                 }
@@ -1742,7 +1768,7 @@ namespace librobotics {
                 warn("lrf_psm: Determinant too small: %f", D);
                 dy = 10;
                 dy = 10;
-                if(forceCheck){
+                if(force_check){
                     warn("lrf_psm: force check");
                     continue;
                 }
@@ -1762,11 +1788,11 @@ namespace librobotics {
             ay += dy;
         }//while
 
-        relLaserPose.x = ax;
-        relLaserPose.y = ay;
-        relLaserPose.a = ath;
+        rel_laser_pose.x = ax;
+        rel_laser_pose.y = ay;
+        rel_laser_pose.a = ath;
 
-#warning "!!!lrf_psm: relRobotPose still not compute!!!"
+#warning "!!!lrf_psm: rel_robot_pose still not compute!!!"
 
         return true;
     }
@@ -1879,31 +1905,265 @@ namespace librobotics {
 
         /*-------------------------------------------------------------
          *
-         * Definition of the LibRobotics: Monte Carlo Localization MCL in 2D space
-         * (for grid map)
+         * Definition of the LibRobotics: Vector Field Histogram (VFH) obstacle avoidance
+         * (http://www-personal.umich.edu/~johannb/vff&vfh.htm)
          *
          *-------------------------------------------------------------*/
 
         namespace vfh {
-            struct simple_vfh2_cfg {
-                float max_range;
-                float A;
-                float B;
-                float angle_res;
-                int smooth_wnd_size;
-            };
+            template <typename T>
+            void compute_histogram(const std::vector<vec2<T> >& obs,
+                                   T A,
+                                   T min_range,
+                                   T max_range,
+                                   T angle_res_in_degree,
+                                   std::vector<T>& h)
+            {
+                std::vector<vec2<T> > obstacles(obs);
+                std::sort(obstacles.begin(), obstacles.end(), angle_compare_xy_component<vec2<T> >);
 
+                T B = A / max_range;
 
+                //search open angle in obstacle list
+                T sum = 0.f;
+                size_t j = 0;
+
+                int step = (int)(360.0 / angle_res_in_degree) + 1;
+                if(step != (int)h.size()) {
+                    h.resize(step);
+                }
+
+                //compute histogram
+                for(int i = 0; (i < step) && (j < obstacles.size()); i++) {
+                    while(j < obstacles.size()) {
+                        if(obstacles[j].degree_360() > (angle_res_in_degree*(i+1))) {
+                            if(sum < 0.f) sum = 0.f;
+                            h[i] += sum;
+                            sum = 0.f;
+                            break;
+                        } else {
+                            T d = obstacles[j].size();
+                            if((d >= min_range) && (d <= max_range)) {
+                                T m = (A - (B * d));
+                                sum += m;
+                            }
+                            j++;
+                        }//if
+                    }//while
+                }//for
+            }
 
             template <typename T>
-            int simple_vfh2(const vec2<T>& target,
-                            const std::vector<vec2<T> >& obs,
-                            const simple_vfh2_cfg& cfg)
+            void smooth_histogram(std::vector<T>& h,
+                                  T threshold,
+                                  const int smooth_wnd_size)
             {
+                std::vector<T> hs(h.size());
+                int h_size = h.size();
+                int idx;
+                T sum = 0;
+                for(int i = 0; i < h_size; i++) {
+                    sum = 0;
+                    for(int l = -smooth_wnd_size; l <= smooth_wnd_size; l++) {
+                        idx = i + l;
+                        if(idx < 0) {
+                            idx = h_size + l;
+                        } else if(idx > (h_size - 1)) {
+                            idx = l;
+                        }
 
+                        if(l < 0)
+                            sum += h[idx] * ((smooth_wnd_size + 1) + l);
+                        else
+                            sum += h[idx] * ((smooth_wnd_size + 1) - l);
+                    }
+                    sum = sum / (2*smooth_wnd_size + 1);
 
-                return 0;
+                    if(sum >= threshold)
+                        hs[i] = sum;
+                    else
+                        hs[i] = 0.f;
+                }
+                //copy back
+                h = hs;
             }
+
+            template <typename T>
+            bool find_open_angle(const vec2<T>& target,
+                                 const std::vector<T>& hs,
+                                 T threshold,
+                                 int open_segment,
+                                 T angle_res,
+                                 vec2<T>& result)
+            {
+                size_t zero_cnt = 0;
+                for(size_t i = 0; i < hs.size(); i++) {
+                    if(hs[i] < threshold) {
+                        zero_cnt++;
+                    }
+                }
+
+                //no obstacle, directly move to the target
+                if(zero_cnt == hs.size()) {
+                    result =  target;
+                    return 0;
+                }
+
+                //extract open segment
+                std::vector<int> k_begin; k_begin.clear();
+                std::vector<int> k_end; k_end.clear();
+                int count = 0;
+                bool is_begin = false;
+                int start_step;
+                for(int i = 0; i < (int)hs.size(); i++) {
+                    if(hs[i] < threshold) {
+                        if(is_begin) {
+                            count++;
+                        } else {
+                            is_begin = true;
+                            count = 0;
+                            start_step = i;
+                        }
+                    } else {
+                        if(is_begin) {
+                            k_begin.push_back(start_step);
+                            k_end.push_back(start_step + count);
+                            is_begin = false;
+                            count = 0;
+                        }
+                    }
+
+                    if(is_begin && (i == (int)(hs.size() - 1))) {
+                        k_begin.push_back(start_step);
+                        k_end.push_back(start_step + count);
+                    }
+                }
+
+                //check first and last segment
+                if((k_begin[0] == 0) && (k_end[k_end.size() - 1] == (int)(hs.size() - 1))) {
+                    //this is the same open segment --> merge them
+                    k_end[k_end.size() - 1] = k_end[0];
+
+                    //remove first segment
+                    k_begin.erase(k_begin.begin());
+                    k_end.erase(k_end.begin());
+                }
+
+                int center;
+                int good_index = -1;
+                vec2<T> good_dir;
+                float d_theta = 1e10;
+                int  num_subseg = 0;
+                bool found = false;
+
+                for(int i = 0; i < (int)k_begin.size(); i++) {
+                    num_subseg = -1;
+                    if(k_end[i] >  k_begin[i]) {
+                        num_subseg = (k_end[i] - k_begin[i]);
+                        center =  (k_end[i] +  k_begin[i]) / 2;
+                    } else if(k_end[i] <  k_begin[i]) {
+                        int tmp1 = hs.size() - k_begin[i];
+                        int tmp2 = k_end[i];
+                        num_subseg = (tmp1 + tmp2);
+
+                        int tmpCenter = (tmp1 + tmp2) / 2;
+                        if((k_begin[i] + tmpCenter) >= (int)hs.size()) {
+                            center = k_end[i] - tmpCenter;
+                        } else {
+                            center = k_begin[i] + tmpCenter;
+                        }
+                    } else {
+                        continue;
+                    }
+
+                    T good_angle;
+                    vec2<T> dir;
+                    float d, c, diff;
+
+                    if(num_subseg >= open_segment) {
+                        num_subseg -= open_segment;
+                        do {
+                            good_angle = (k_begin[i] + (open_segment/2) + num_subseg) * angle_res;
+                            good_angle = DEG2RAD(good_angle);
+                            dir.x = cos(good_angle);
+                            dir.y = sin(good_angle);
+                            d = dir ^ target.norm();
+                            c = dir * target.norm();
+                            diff = fabs(atan2(c,d));
+                            if(diff < d_theta) {
+                                good_index = i;
+                                d_theta = diff;
+                                good_dir = dir;
+                                found = true;
+                            }
+                            num_subseg--;
+                        } while (num_subseg >= 0);
+                    } else {
+                        good_angle = DEG2RAD(center * angle_res);
+                        dir = vec2<T>(cos(good_angle), sin(good_angle));
+                        d = dir ^ target.norm();
+                        c = dir * target.norm();
+                        diff = fabs(atan2(c,d));
+                        if(diff < d_theta) {
+                            good_index = i;
+                            d_theta = diff;
+                            good_dir = dir;
+                            found = true;
+                        }
+                    }//if
+                }//for
+
+                if(found)
+                    result = good_dir;
+                return found;
+            }//vfh_find_open_angle
+
+#ifdef librobotics_use_cimg
+            template<typename T1, typename T2>
+            void draw_histogram_to_cimg(const std::vector<T1>& histogram,
+                                            cimg_library::CImg<T2>& img,
+                                            const T2 color[],
+                                            bool draw_line = false,
+                                            float scale = 0.1,
+                                            pose2<T1> offset = pose2<T1>(),
+                                            bool flip_x = false,
+                                            bool flip_y = true)
+            {
+                using namespace cimg_library;
+                int dimx = img.dimx();
+                int dimy = img.dimy();
+                int xoffset = dimx/2;
+                int yoffset = dimy/2;
+
+                CImgList<T1> points;
+                float theta_step = (2*M_PI)/histogram.size();
+                vec2f pts;
+                float x, y;
+
+                for(size_t i = 0; i < histogram.size(); i++) {
+                    pts = vec2f(1,0).rotate(theta_step*i) * histogram[i];
+                    if(!((offset.x == offset.y) && (offset.y == offset.a) && (offset.a == 0))) {
+                        pts = pts.rot(offset.a) + offset.vec();
+                    }
+
+                    x = pts.x;
+                    if(flip_x) x = -x;
+                    x += xoffset;
+
+                    y = pts.y;
+                    if(flip_y) y = -y;
+                    y += yoffset;
+
+                    points.push_back(CImg<T1>::vector(x, y));
+                    img.draw_line(xoffset, yoffset, (int)x, (int)y, color, 0.4f);
+                    if(draw_line) {
+                        img.draw_line(points, color, 0.8f);
+                    }
+                }
+
+            }
+#endif
+
 
         }
     }
