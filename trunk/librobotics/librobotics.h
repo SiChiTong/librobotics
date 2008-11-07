@@ -652,6 +652,57 @@ namespace librobotics {
         return thetai < thetaj;
     }
 
+    /*-------------------------------------------------------------------------
+     *
+     * Definition of the LibRobotics: 2D map information
+     *
+     -------------------------------------------------------------------------*/
+    template<typename T> struct map_feature2 {
+
+
+    };
+
+    template<typename T> struct map_grid2 {
+        vec2i                               mapsize;
+        pose2<T>                            offset;
+        vec2<T>                             center;
+        T                                   resolution;
+        std::vector<std::vector<T> >        mapprob;
+
+        bool inline is_inside(int x, int y) {
+            return (x >= 0) && (x < mapsize.x) && (y >= 0) && (y < mapsize.y);
+        }
+
+        bool get_grid_coordinate(const pose2<T>& pose, vec2i& v) {
+            v.x = (int)(center.x + (int)round((pose.x-offset.x)/resolution));
+            v.y = (int)(center.y + (int)round((pose.y-offset.y)/resolution));
+            return is_inside(v.x, v.y);
+        }
+
+        bool get_grid_coordinate(const vec2<T>& pts, vec2i& v) {
+            v.x = (int)(center.x + (int)round((pts.x-offset.x)/resolution));
+            v.y = (int)(center.y + (int)round((pts.y-offset.y)/resolution));
+            return is_inside(v.x, v.y);
+        }
+
+
+        void load(const std::string& filename) {
+            std::ifstream file;
+            open_file_with_exception(file, filename);
+        }
+
+
+#ifdef  librobotics_use_cimg
+
+#endif
+
+
+    };
+
+    typedef map_grid2<float> map_grid2f;
+    typedef map_grid2<double> map_grid2d;
+
+
 
     /*-------------------------------------------------------------------------
      *
@@ -682,6 +733,8 @@ namespace librobotics {
     typedef bbox3<long> bbox3l;
     typedef bbox3<float> bbox3f;
     typedef bbox3<double> bbox3d;
+
+
 
 
     /*-------------------------------------------------------
@@ -1874,7 +1927,7 @@ namespace librobotics {
          *
          -------------------------------------------------------------*/
 
-        namespace ekf_localization2D {
+        namespace ekf_feature2D {
 
         }
 
@@ -1885,7 +1938,7 @@ namespace librobotics {
          *
          -------------------------------------------------------------*/
 
-        namespace mcl_feature2D {
+        namespace mcl_featureD {
 
         }
 
@@ -1902,6 +1955,7 @@ namespace librobotics {
     }
 
     namespace path_planning {
+
 
         /*-------------------------------------------------------------
          *
@@ -2163,10 +2217,8 @@ namespace librobotics {
 
             }
 #endif
-
-
-        }
-    }
+        }//vfh
+    }//path_planning
 
 
 }
