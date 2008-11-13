@@ -192,6 +192,7 @@
 
 //etc
 #define SIGN(A)             ((A) >= 0.0 ? (1.0) : (-1.0))
+#define SIGN_BOOL(A)        ((A) >= 0.0 ? (true) : (false))
 #define IS_ZERO             (1e-8)
 #define VERY_SMALL          (1e-6)
 #define SQR(x)              ((x)*(x))
@@ -223,6 +224,24 @@ T inline norm_a_rad(T a) {
 template<typename T>
 T inline norm_a_deg(T a) {
     return RAD2DEG(norm_a_rad(DEG2RAD(a)));
+}
+
+template<typename T>
+T inline angle_min_diff_rad(T a, T b) {
+    a = norm_a_rad(a);
+    b = norm_a_rad(b);
+
+    T d_angle = b - a;
+
+    if(fabs(d_angle) > M_PI_2) {
+        //wrong direction
+        if(d_angle >= 0) {
+            d_angle = -((2*M_PI) - d_angle);
+        } else {
+            d_angle = ((2*M_PI) + d_angle);
+        }
+    }
+    return d_angle;
 }
 
 //simple print function
