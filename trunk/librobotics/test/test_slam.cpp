@@ -16,7 +16,7 @@ using namespace std;
 using namespace librobotics;
 using namespace cimg_library;
 
-int main(int argc, char* argv) {
+int main(int argc, char** argv) {
 
 
 
