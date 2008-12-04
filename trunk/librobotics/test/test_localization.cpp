@@ -27,7 +27,7 @@ const unsigned char
 
 int main(int argc, char** argv) {
     map_grid2d map;
-    map.load_image("../test_data/map_400_200_2.png",
+    map.load_image("../test_data/map_400_200.png",
                    pose2d(),
                    vec2d(20.0, 10.0),
                    1.0/10);

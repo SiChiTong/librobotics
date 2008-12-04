@@ -52,6 +52,7 @@
 #include <cstdlib>
 #include <limits>
 #include <iostream>
+#include <string>
 
 
 /*
@@ -182,7 +183,7 @@
 /* @{ */
 #define SIGN(A)             ((A) >= 0.0 ? (1.0) : (-1.0))
 #define SIGN_BOOL(A)        ((A) >= 0.0 ? (true) : (false))
-
+#define ROUND(x)            ((x) < 0 ? ceil((x)-0.5):floor((x)+0.5))
 #define IS_ZERO             (1e-8)
 #define VERY_SMALL          (1e-6)
 #define SQR(x)              ((x)*(x))
@@ -817,8 +818,8 @@ namespace librobotics {
          * @return true if (x,y) is inside the map
          */
         bool get_grid_coordinate(T x, T y, vec2i& v) {
-            v.x = (int)(center.x + (int)round((x-offset.x)/resolution));
-            v.y = (int)(center.y + (int)round((y-offset.y)/resolution));
+            v.x = (int)(center.x + (int)ROUND((x-offset.x)/resolution));
+            v.y = (int)(center.y + (int)ROUND((y-offset.y)/resolution));
             return is_inside(v.x, v.y);
         }
 
@@ -829,8 +830,8 @@ namespace librobotics {
          * @return value of grid (>=0) if (x,y) is inside the map
          */
         T get_grid_value(T x, T y) {
-            int gx = (int)(center.x + (int)round((x-offset.x)/resolution));
-            int gy = (int)(center.y + (int)round((y-offset.y)/resolution));
+            int gx = (int)(center.x + (int)ROUND((x-offset.x)/resolution));
+            int gy = (int)(center.y + (int)ROUND((y-offset.y)/resolution));
             if(is_inside(gx, gy))
                 return mapprob[gx][gy];
             else
@@ -1344,7 +1345,7 @@ namespace librobotics {
      --------------------------------------------------------------------------------*/
 
     enum lrf_range_condition {
-        NO_ERROR        = 0x00,
+        ERR_NONE        = 0x00,
         ERR_RANGE       = 0x01,     //too far
         ERR_MOVE        = 0x02,     //moving object
         ERR_MIXED       = 0x04,     //mixed pixel
@@ -1517,7 +1518,7 @@ namespace librobotics {
     void lrf_range_threshold(std::vector<T>& ranges,
                              T minValue,
                              T newMinValue = 0,
-                             T maxValue = std::numeric_limits<T>::max(),
+                             T maxValue = (T)(1e6),
                              T newMaxValue = 0)
     {
         for(size_t i = 0; i < ranges.size(); i++ ) {
@@ -1536,7 +1537,7 @@ namespace librobotics {
                              std::vector<unsigned int>& bad,
                              T minValue,
                              T newMinValue = 0,
-                             T maxValue = std::numeric_limits<T>::max(),
+                             T maxValue = (T)(1e6),
                              T newMaxValue = 0)
     {
         if(bad.size() != ranges.size()) {
@@ -1553,7 +1554,7 @@ namespace librobotics {
                 ranges[i] = newMaxValue;
                 bad[i] = ERR_RANGE;
             } else {
-                bad[i] = NO_ERROR;
+                bad[i] = ERR_NONE;
             }
         }
     }
@@ -1597,7 +1598,8 @@ namespace librobotics {
                   seg[i] = nSegment;
                   newSegment = false;
                 } else {
-                  if(fabs(ranges[i] - lastRange) > rangeThreshold) {
+                    T range_err = ranges[i] - lastRange;
+                    if(fabs((double)range_err) > rangeThreshold) {
                       //end current segment
                       nSegment++;
 
@@ -1983,7 +1985,7 @@ namespace librobotics {
                             if(occluded) {
                                 new_bad[idx] = ERR_OCCLUDED;//set the occluded flag
                             } else {
-                                new_bad[idx] = NO_ERROR;
+                                new_bad[idx] = ERR_NONE;
                             }
 
                             //the new range reading also it has to inherit the other flags
@@ -2161,7 +2163,7 @@ namespace librobotics {
         rel_laser_pose.y = ay;
         rel_laser_pose.a = ath;
 
-#warning "!!!lrf_psm: rel_robot_pose still not compute!!!"
+        warn("!!!lrf_psm: rel_robot_pose still not compute!!!");
 
         return true;
     }
