@@ -31,9 +31,7 @@
  *  OTHER DEALINGS IN THE SOFTWARE.
  */
 
-// Define version number of the current file.
-//
-
+/** Current library version */
 #ifndef librobotics_version
 #define librobotics_version 0.1
 
@@ -56,16 +54,14 @@
 #include <iostream>
 
 
-/*-----------------------------------------------------------
- #
- # Test/auto-set LibRobotics configuration variables
- # and include required headers.
- #
- # If you find that default configuration variables are
- # not adapted, you can override their values before including
- # the header file "librobotics.h" (using the #define directive).
- #
- ------------------------------------------------------------*/
+/*
+ * Test/auto-set LibRobotics configuration variables
+ * and include required headers.
+ *
+ * If you find that default configuration variables are
+ * not adapted, you can override their values before including
+ * the header file "librobotics.h" (using the #define directive).
+ */
 
 // Operating system configuration.
 //
@@ -149,9 +145,9 @@
 
 #ifndef librobotics_debug
 #define librobotics_debug 2
-#elif !(librobotics_debug==0 || librobotics_debug==1 || librobotics_debug==2 || librobotics_debug==3 || librobotics_debug==4)
+#elif !(librobotics_debug==0 || librobotics_debug==1 || librobotics_debug==2)
 #error LibRobotics Library : Configuration variable 'librobotics_debug' is badly defined.
-#error (valid values are '0=quiet', '1=stderr', '2=dialog', '3=stderr+warnings', '4=dialog+warnings').
+#error (valid values are '0=quiet', '1=stderr', '2=stderr+warnings').
 #endif
 
 // CImg configuration.
@@ -178,21 +174,15 @@
 #include <GL/glut.h>
 #endif
 
-
-/*------------------------------------------------------------------------------
- *
- * Define user-friendly macros.
- *
- * User macros are prefixed by 'librobotics_' and can be used in your own code.
- *
- ------------------------------------------------------------------------------*/
 #ifndef M_PI
 #define M_PI           3.14159265358979323846
 #endif
 
-//etc
+/** \defgroup g_user_marco User-friendly macros */
+/* @{ */
 #define SIGN(A)             ((A) >= 0.0 ? (1.0) : (-1.0))
 #define SIGN_BOOL(A)        ((A) >= 0.0 ? (true) : (false))
+
 #define IS_ZERO             (1e-8)
 #define VERY_SMALL          (1e-6)
 #define SQR(x)              ((x)*(x))
@@ -208,8 +198,15 @@
 #define MAX2(a, b)          (((a) >= (b)) ? (a) : (b))
 #define MAX2_BOOL(a, b)      (((a) >= (b)) ? true : false)
 #define MAX3(a, b, c)       (MAX2(MAX2(a,b), c))
+/* @} */
 
-//angle normalize function
+/** \defgroup g_user_template User-friendly template functions */
+/* @{ */
+/**
+ * Normalize the angle to \f$(-\pi, \pi)\f$ radian unit
+ * \param a input angle value
+ * \return normalized angle
+ */
 template<typename T>
 T inline norm_a_rad(T a) {
     int m = (int)(a / (2.0*M_PI));
@@ -221,11 +218,22 @@ T inline norm_a_rad(T a) {
     return a;
 };
 
+/**
+ * Normalize the angle to \f$(-180, 180)\f$ degree unit
+ * \param a input angle value
+ * \return normalized angle
+ */
 template<typename T>
 T inline norm_a_deg(T a) {
     return RAD2DEG(norm_a_rad(DEG2RAD(a)));
 }
 
+/**
+ * Find the minimum different between two input angle in radian unit
+ * \param a input angle value
+ * \param b input angle value
+ * \return minimum different angle
+ */
 template<typename T>
 T inline angle_min_diff_rad(T a, T b) {
     a = norm_a_rad(a);
@@ -243,19 +251,26 @@ T inline angle_min_diff_rad(T a, T b) {
     }
     return d_angle;
 }
+/* @} */
 
+
+
+/** \defgroup g_lib_marco Helper macros for the library */
+/* @{ */
 //simple print function
 #define PRINTVAR(x)         (std::cout << #x << ":" << (x) << "\n")
 #define PRINTVALUE(x)       (std::cout << (x) << "\n")
-#define PRINTVEC(x)         for(uint idx = 0; idx < x.size(); idx++) { \
-                                std::cout << idx << "," << x[idx] << "\n"; \
-                            }
+#define PRINTVEC(x) \
+    for(uint idx = 0; idx < x.size(); idx++) { \
+        std::cout << idx << "," << x[idx] << "\n"; \
+    }
 
 //open file
-#define open_file_with_exception(f, n)     f.open(n.c_str()); \
-                                           if(!f.is_open()) { \
-                                               throw LibRoboticsIOException("Cannot open: %s", n.c_str()); \
-                                           } \
+#define open_file_with_exception(f, n) \
+    f.open(n.c_str()); \
+    if(!f.is_open()) { \
+        throw LibRoboticsIOException("Cannot open: %s", n.c_str()); \
+    }
 
 //check vector size
 #define check_vsize2(v0, v1)                  (v0.size() == v1.size())
@@ -264,16 +279,16 @@ T inline angle_min_diff_rad(T a, T b) {
 #define check_vsize5(v0, v1, v2, v3, v4)      (check_vsize4(v0, v1, v2, v3) && check_vsize2(v0, v4))
 
 //warn on vector size compare
-#define warn_vsize2(v0, v1)                   if(!check_vsize2(v0,v1)) { \
-                                                    warn("#v0 and #v1 size are not match");\
-                                              } \
+#define warn_vsize2(v0, v1) \
+    if(!check_vsize2(v0,v1)) { \
+        warn("#v0 and #v1 size are not match");\
+    }
+/* @} */
 
-/*------------------------------------------------
- *
- * Definition of the LibRobotics:: namespace
- *
- -------------------------------------------------*/
 
+/**
+ * Main namespace for The C++ Robotics Library
+ */
 namespace librobotics {
 
     struct LibRoboticsException;
@@ -294,36 +309,32 @@ namespace librobotics {
 
     void inline info() { fprintf(stderr, "LibRobotics V 0.1\n"); }
 
-    //! Get/set the current LibRobotics exception mode.
     /**
-         The way error messages are handled by LibRobotics can be changed dynamically, using this function.
-         Possible values are :
-             - 0 to hide debug messages (quiet mode, but exceptions are still thrown).
-             - 1 to display debug messages on standard error (stderr).
-             - 2 to display debug messages in modal windows (default behavior).
-             - 3 to do as 1 + add extra warnings (may slow down the code !).
-             - 4 to do as 2 + add extra warnings (may slow down the code !).
-     **/
+     * Get/set the current LibRobotics exception mode.
+     * The way error messages are handled by LibRobotics can be changed dynamically, using this function.
+     * Possible values are :
+     *      - 0 to hide debug messages (quiet mode, but exceptions are still thrown).
+     *      - 1 to display debug messages on standard error (stderr).
+     *      - 2 to display debug messages in modal windows (default behavior).
+     */
     inline unsigned int& exception_mode() { static unsigned int mode = librobotics_debug; return mode; }
 
 
-    /*----------------------------------------------
-     *
+    /*
      * Definition of the LibRobotics: Exception structures
-     *
-     ----------------------------------------------*/
+     */
     struct LibRoboticsException {
     #define _librobotics_exception_err(etype, disp_flag) \
         std::va_list ap; va_start(ap,format); std::vsprintf(message,format,ap); va_end(ap); \
         switch (librobotics::exception_mode()) { \
             case 0: break; \
+            case 1: \
             case 2: \
-            case 4: \
-                std::fprintf(stderr,"\n%s# %s%s :\n%s\n\n",librobotics::t_red,etype,librobotics::t_normal,message); \
+                std::fprintf(stderr,"\n%s# %s%s : %s\n\n",librobotics::t_red,etype,librobotics::t_normal,message); \
                 break; \
-            default: std::fprintf(stderr,"\n%s# %s%s :\n%s\n\n",librobotics::t_red,etype,librobotics::t_normal,message); \
+            default: std::fprintf(stderr,"\n%s# %s%s : %s\n\n",librobotics::t_red,etype,librobotics::t_normal,message); \
         } \
-        if (librobotics::exception_mode()>=3) librobotics::info();
+        if (librobotics::exception_mode()>=2) librobotics::info();
 
         char message[1024]; //!< Message associated with the error that thrown the exception.
         LibRoboticsException() {
@@ -364,10 +375,10 @@ namespace librobotics {
         LibRoboticsRuntimeException(const char *format, ...) { _librobotics_exception_err("LibRoboticsRuntimeException",false); }
     };
 
-    //! Display a warning message.
     /**
-     *   \param format is a C-string describing the format of the message, as in <tt>std::printf()</tt>.
-     **/
+     * Display a warning message.
+     * \param format is a C-string describing the format of the message, as in <tt>std::printf()</tt>.
+     */
     inline void warn(const char *format, ...) {
         if (librobotics::exception_mode() >= 1) {
             char message[8192];
@@ -378,7 +389,7 @@ namespace librobotics {
             #ifdef librobotics_strict_warnings
                 throw LibRoboticsWarningException(message);
             #else
-                std::fprintf(stderr,"%s# LibRobotics Warning%s :\n%s\n",librobotics::t_red,librobotics::t_normal,message);
+                std::fprintf(stderr,"%s# LibRobotics Warning%s : %s\n",librobotics::t_red,librobotics::t_normal,message);
             #endif
         }
     }
@@ -389,10 +400,13 @@ namespace librobotics {
      *
      ----------------------------------------------*/
 
+    /**
+     * Get current time of day
+     * \return time in second
+     */
 #if librobotics_OS == 1
 #include <sys/time.h>
 #include <time.h>
-
     inline double utils_get_current_time() {
         timeval UTILS_SYS_TIME;
         if (gettimeofday(&UTILS_SYS_TIME, NULL) != 0){
@@ -415,25 +429,35 @@ namespace librobotics {
      * Definition of the LibRobotics: 2D robot configuration structures and functions
      *
      --------------------------------------------------------------------------------*/
-
+    /**
+     * Template class for 2D vector
+     */
     template<typename T> struct vec2 {
         T x, y;
 
+        ///Constructor
         vec2() : x(0), y(0) { }
 
-        vec2(T xx, T yy) : x(xx), y(yy) { }
+        ///Constructor
+        template<typename T1>
+        vec2(T1 xx, T1 yy) : x(xx), y(yy) { }
 
+        ///Copy constructor
         template<typename T1>
         vec2(const vec2<T1>& v) : x((T)v.x), y((T)v.y) { }
 
+        ///Unary minus
         vec2 operator - ( ) const { return vec2(-x, -y); }
 
+        ///Addition for vector/vector
         template<typename T1>
         vec2 operator + (const vec2<T1>& v) const { return vec2(x + (T)v.x, y + (T)v.y); }
 
+        ///Subtraction for vector/vector
         template<typename T1>
         vec2 operator - (const vec2<T1>& v) const { return vec2(x - (T)v.x, y - (T)v.y); }
 
+        ///Basic assignment for vector/vector
         template<typename T1>
         vec2& operator = (const vec2<T1>& v) {
             x = v.x;
@@ -441,6 +465,7 @@ namespace librobotics {
             return *this;
         }
 
+        ///Assignment by addition for vector/vector
         template<typename T1>
         vec2& operator += (const vec2<T1>& v) {
             x += v.x;
@@ -448,6 +473,7 @@ namespace librobotics {
             return *this;
         }
 
+        ///Assignment by subtraction for vector/vector
         template<typename T1>
         vec2& operator -= (const vec2<T1>& v) {
             x -= v.x;
@@ -455,26 +481,31 @@ namespace librobotics {
             return *this;
         }
 
+        ///Dot product between two vectors
         template<typename T1>
-        T operator ^ (const vec2<T1>& v) const {   // dot product
+        T operator ^ (const vec2<T1>& v) const {
             return (T)((x*v.x) + (y*v.y));
         }
 
+        ///Cross product between two vectors
         template<typename T1>
-        T operator * (const vec2<T1>& v) const {    // cross product
+        T operator * (const vec2<T1>& v) const {
             return (T)((x*v.y) - (y*v.x));
         }
 
+        ///Multiply by scalar value
         template<typename T1>
         vec2 operator * (const T1& s) const {
             return vec2(x*s, y*s);
         }
 
+        ///Divide by scalar value
         template<typename T1>
         vec2 operator / (const T1& s) const {
             return vec2(x/s, y/s);
         }
 
+        ///Assignment by multiply with scalar value
         template<typename T1>
         vec2& operator *= (const T1& s) {
             x *= s;
@@ -482,6 +513,7 @@ namespace librobotics {
             return (*this);
         }
 
+        ///Assignment by divide with scalar value
         template<typename T1>
         vec2& operator /= (const T1& s) {
             x /= s;
@@ -489,46 +521,55 @@ namespace librobotics {
             return (*this);
         }
 
+        ///Get size
         T size( ) const {
             return (T)sqrt(x*x + y*y);
         }
 
+        ///Get square size
         T sqrSize( ) const {
             return (T)(x*x + y*y);
         }
 
+        ///Get angle in \f$(-\pi, \pi)\f$ radian range
         T theta() const {
             return (T)atan2(y,x);
         }
 
+        ///Get angle in \f$(0, 2\pi)\f$ radian range
         T theta_2PI() const {
             T tmp = atan2(y,x);
             if(tmp < 0) tmp += 2 * M_PI;
             return tmp;
         }
 
+        ///Get angle in \f$(-180, 180)\f$ degree range
         T degree() const {
             return (T)RAD2DEG(atan2(y,x));
         }
 
+        ///Get angle in \f$(0, 360)\f$ degree range
         T degree_360() const {
             return (T)RAD2DEG(theta_2PI());
         }
 
-        bool isZero() const {
+        ///Check for zero size vector
+        bool is_zero() const {
             return (this->size() <= IS_ZERO);
         }
 
+        ///Get normalized vector
         vec2 norm() const {
-            if (isZero()) {
+            if (is_zero()) {
                 return vec2();
             } else {
                 return vec2((*this)/size());
             }
         }
 
+        ///Normalize the vector
         vec2& normalize() {
-            if (isZero()) {
+            if (is_zero()) {
                 x = 0;
                 y = 0;
                 return *this;
@@ -537,6 +578,11 @@ namespace librobotics {
             }
         }
 
+        /**
+         * Get rotated vector
+         * \param angle rotate angle
+         * \param angle unit select (true for radian, false for degree)
+         */
         template<typename T1>
         vec2 rot(T1 angle, bool rad = true) const {
             if(!rad) angle = DEG2RAD(angle);
@@ -545,6 +591,11 @@ namespace librobotics {
             return vec2((T)(x*c - y*s), (T)(x*s + y*c));
         }
 
+        /**
+         * Rotate the vector
+         * \param angle rotate angle
+         * \param angle unit select (true for radian, false for degree)
+         */
         template<typename T1>
         vec2& rotate(T1 angle, bool rad = true) {
             vec2<T> tmp = this->rot(angle, rad);
@@ -553,53 +604,81 @@ namespace librobotics {
             return *this;
         }
 
+        ///Print vector component to stand output
         void print() {
             std::cout << *this << std::endl;
         }
 
-        /// support for output stream
+        ///Support for output stream operator
         friend std::ostream& operator << (std::ostream& os, const vec2<T>& v) {
             return os << v.x << " " << v.y;
         }
 
-        /// support for input stream
+        ///Support for input stream operator
         friend std::istream& operator >> (std::istream& is, vec2<T>& v) {
             is >> v.x >> v.y;
             return is;
         }
     };
 
+    /**
+     * vec2 with int data type (Some operator for function will not work correctly)
+     */
     typedef vec2<int> vec2i;
+
+    /**
+     * vec2 with long data type (Some operator for function will not work correctly)
+     */
     typedef vec2<long> vec2l;
+
+    /**
+     * vec2 with float data type
+     */
     typedef vec2<float> vec2f;
+
+    /**
+     * vec2 with double data type
+     */
     typedef vec2<double> vec2d;
 
+    /**
+     * Template class for 2D robot position configuration.
+     */
     template<typename T> struct pose2 {
-        T x, y, a;
+        T x;    //!< X position
+        T y;    //!< Y position
+        T a;    //!< Heading direction
 
+        ///Constructor
         pose2() : x(0), y(0), a(0)
         { }
 
+        ///Constructor
         template<typename T1>
         pose2(T1 xx, T1 yy, T1 aa) :
             x(xx), y(yy), a(aa)
         { }
 
+        ///Constructor
         template<typename T1>
         pose2(vec2<T1> p, T1 aa) :
             x(p.x), y(p.y), a(aa)
         { }
 
+        ///Copy constructor
         template<typename T1>
         pose2(const pose2<T1>& p2) :
             x(p2.x), y(p2.y), a(p2.a)
         { }
 
+
+        ///Addition
         template<typename T1>
         pose2 operator + (const pose2<T1>& pose) const {
-            return pose2(pose.x + x, pose.y + y, pose.a + a);
+            return pose2(pose.x + x, pose.y + y, norm_a_rad(pose.a + a));
         }
 
+        ///Subtraction
         template<typename T1>
         pose2 operator - (const pose2<T1>& pose) const {
             return pose2(x - pose.x, y - pose.y, norm_a_rad(a - pose.a));
@@ -662,7 +741,7 @@ namespace librobotics {
      *
      -------------------------------------------------------------------------*/
 
-    template<typename T> bool angle_compare_xy_component( const T& i, const T& j)
+    template<typename T> bool compare_vec2_angle( const vec2<T>& i, const vec2<T>& j)
     {
         double thetai = atan2(i.y, i.x);
         if(thetai < 0) thetai += (2*M_PI);
@@ -681,41 +760,228 @@ namespace librobotics {
 
     };
 
+    /**
+     * Template class for 2D grid map.
+     */
     template<typename T> struct map_grid2 {
-        vec2i                               mapsize;
-        pose2<T>                            offset;
-        vec2<T>                             center;
-        T                                   resolution;
-        std::vector<std::vector<T> >        mapprob;
+        vec2i mapsize;      //!< Size of the map
+        pose2<T> offset;    //!< Map offset in real world unit (m, mm, cm...)
+        vec2<T> center;     //!< Map center in real world unit (m, mm, cm...)
+        T resolution;       //!< Map resolution real world unit/map size unit
+        std::vector<std::vector<T> > mapprob; //!< Value of each grid cell
 
+        ///Constructor
+        map_grid2() : resolution(1)
+        { }
+
+        ///Print out map information to standard output
+        void print_info() {
+            PRINTVAR(mapsize);
+            PRINTVAR(offset);
+            PRINTVAR(center);
+            PRINTVAR(resolution);
+        }
+
+        /**
+         * Directly check grid position with map size.
+         * @param x grid coordinate
+         * @param y grid coordinate
+         * @return true if (x,y) is inside the map
+         */
         bool inline is_inside(int x, int y) {
             return (x >= 0) && (x < mapsize.x) && (y >= 0) && (y < mapsize.y);
         }
 
-        bool get_grid_coordinate(const pose2<T>& pose, vec2i& v) {
-            v.x = (int)(center.x + (int)round((pose.x-offset.x)/resolution));
-            v.y = (int)(center.y + (int)round((pose.y-offset.y)/resolution));
+        /**
+         * Get real world unit position of given grid coordinate.
+         * @param x grid coordinate
+         * @param y grid coordinate
+         * @param pts result in real world unit
+         * @return true if (x,y) is inside the map
+         */
+        bool get_real_pts(int x, int y, vec2<T>& pts) {
+            if(is_inside(x, y)) {
+                pts.x = (x - center.x) * resolution;
+                pts.y = (y - center.y) * resolution;
+                return true;
+            } else {
+                return false;
+            }
+        }
+
+        /**
+         * Get grid coordinate from real world unit position.
+         * @param x position
+         * @param y position
+         * @param v result in grid coordinate
+         * @return true if (x,y) is inside the map
+         */
+        bool get_grid_coordinate(T x, T y, vec2i& v) {
+            v.x = (int)(center.x + (int)round((x-offset.x)/resolution));
+            v.y = (int)(center.y + (int)round((y-offset.y)/resolution));
             return is_inside(v.x, v.y);
         }
 
-        bool get_grid_coordinate(const vec2<T>& pts, vec2i& v) {
-            v.x = (int)(center.x + (int)round((pts.x-offset.x)/resolution));
-            v.y = (int)(center.y + (int)round((pts.y-offset.y)/resolution));
-            return is_inside(v.x, v.y);
+        /**
+         * Get probabilistic value of give real world unit position.
+         * @param x position in real world
+         * @param y position in real world
+         * @return value of grid (>=0) if (x,y) is inside the map
+         */
+        T get_grid_value(T x, T y) {
+            int gx = (int)(center.x + (int)round((x-offset.x)/resolution));
+            int gy = (int)(center.y + (int)round((y-offset.y)/resolution));
+            if(is_inside(gx, gy))
+                return mapprob[gx][gy];
+            else
+                return -1;
         }
 
+        /**
+         * Set grid at real world position with specific value.
+         * @param x position in real world
+         * @param y position in real world
+         * @param value
+         * @return true if (x,y) is inside the map
+         */
+        bool set_grid_value(T x, T y, T value) {
+            int gx = (int)(center.x + (int)round((x-offset.x)/resolution));
+            int gy = (int)(center.y + (int)round((y-offset.y)/resolution));
+            if(is_inside(gx, gy)) {
+                mapprob[gx][gy] = value;
+                return true;
+            } else
+                return false;
+        }
 
-        void load(const std::string& filename) {
+        /**
+         * Load map data from text file.
+         * Example of map with 3x3 size (do not put \\\\ comment inside the file) \n
+         *      3 3             \\\\size \n
+         *      0.0 0.0 0.0     \\\\offset \n
+         *      0.0 0.0         \\\\center \n
+         *      1.0             \\\\scale \n
+         *      0.1 0.2 0.3     \\\\grid value of (x, 0) \n
+         *      0.4 0.5 0.6     \\\\grid value of (x, 1) \n
+         *      0.7 0.8 0.8     \\\\grid value of (x, 2) \n
+         * @param filename of the map data
+         */
+        void load_txt(const std::string& filename) {
             std::ifstream file;
             open_file_with_exception(file, filename);
+            file >> mapsize;
+            file >> offset;
+            file >> center;
+            file >> resolution;
+            if(resolution <= 0) {
+                warn("resolution must > 0 -> automatic set to 1.0");
+                resolution = 1.0;
+            }
+            center /= resolution;
+            mapprob.resize(mapsize.x);
+            for(int i = 0; i < mapsize.x && !file.eof(); i++) {
+                mapprob[i].resize(mapsize.y);
+                for(int j = 0; j < mapsize.y && !file.eof(); j++) {
+                    file >> mapprob[i][j];
+                }
+            }
+        }
+
+        /**
+         * Save map data to text file.
+         * @param filename of the output map
+         */
+        void save_txt(const std::string& filename) {
+            std::ofstream file;
+            open_file_with_exception(file, filename);
+            file << mapsize << "\n";
+            file << offset << "\n";
+            file << (center*resolution) << "\n";
+            file << resolution << "\n";
+            for(int i = 0; i < mapsize.x && !file.eof(); i++) {
+                for(int j = 0; j < mapsize.y && !file.eof(); j++) {
+                    file << mapprob[i][j] << " ";
+                }
+                file << "\n";
+            }
+            file.close();
         }
 
 
-#ifdef  librobotics_use_cimg
+
+#ifdef librobotics_use_cimg
+        /**
+         * Load map data from image file. Image data should save in 8 bit color depth format.
+         * This function will use only first channel as map data.
+         * Map data will read directly for each pixel position to grid position.
+         * @param filename of the map image
+         * @param _offset map offset in real world unit (m, mm, cm...)
+         * @param _center map center in real world unit (m, mm, cm...)
+         * @param _resolution map resolution in real world unit (m, mm, cm...)
+         */
+        void load_image(const std::string& filename,
+                        const pose2<T>& _offset,
+                        const vec2<T>& _center,
+                        T _resolution)
+        {
+            using namespace cimg_library;
+            CImg<unsigned char> img;
+            try {
+                img.load(filename.c_str());
+            } catch (CImgException& e) {
+                throw LibRoboticsIOException(e.message);
+            }
+
+            mapsize.x = img.dimx();
+            mapsize.y = img.dimy();
+            offset = offset;
+            center = _center;
+            resolution = _resolution;
+            if(resolution <= 0) {
+                warn("resolution must > 0 -> automatic set to 1.0");
+                resolution = 1.0;
+            }
+            center /= resolution;
+            PRINTVAR(center);
+            mapprob.resize(mapsize.x);
+            for(int i = 0; i < mapsize.x; i++) {
+                mapprob[i].resize(mapsize.y);
+                for(int j = 0; j < mapsize.y; j++) {
+                    mapprob[i][j] = (255 - img(i, j, 0)) / 255.0;
+                }
+            }
+        }
+
+        /**
+         * Get image of the map
+         * @param flip_x true to flip result image along X-axis
+         * @param flip_y true to flip result image along Y-axis
+         * @return image in CImg<unsigned char> format.
+         */
+        cimg_library::CImg<unsigned char>
+        get_image(bool flip_x = false, bool flip_y = true) {
+            using namespace cimg_library;
+            CImg<unsigned char> img(mapsize.x, mapsize.y, 1, 3, 0);
+            unsigned char v = 0;
+            int x, y;
+            for(int i = 0; i < mapsize.x; i++) {
+                for(int j = 0; j < mapsize.y; j++) {
+                    v = (unsigned char)(255 - (mapprob[i][j] * 255));
+                    x = i;
+                    y = j;
+
+                    if(flip_x) x = (mapsize.x - 1) - x;
+                    if(flip_y) y = (mapsize.y - 1) - y;
+
+                    img(x, y, 0) = v;
+                    img(x, y, 1) = v;
+                    img(x, y, 2) = v;
+                }
+            }
+            return img;
+        }
 
 #endif
-
-
     };
 
     typedef map_grid2<float> map_grid2f;
@@ -1477,30 +1743,39 @@ namespace librobotics {
             img.draw_point(points, color);
         }
     }
-
 #endif
     /*--------------------------------------------------------------------------------
      *
-     * Definition of the LibRobotics: 2D Measurement and M#ifdef librobotics_use_cimgotion Model
+     * Definition of the LibRobotics: 2D Measurement and Motion Model
      *
      --------------------------------------------------------------------------------*/
 
+    /**
+     * Namespace for robot mathematics model
+     */
     namespace model {
-        namespace measurement {
-            /*---------------------------------------------------------
-             *
-             * From Probabilistic Robotics (Ch.6 - Robot Perception)
-             * (http://robots.stanford.edu/probabilistic-robotics/)
-             *
-             ---------------------------------------------------------*/
 
+        /**
+         * Namespace for robot mathematics measurement model
+         */
+        namespace measurement {
+            /**
+             * Measurement model for range sensor from CH6 from Probabilistic Robotics book.
+             * http://robots.stanford.edu/probabilistic-robotics/
+             * @param x measurement data
+             * @param x_mean expected measurement range
+             * @param x_max maximum possible measurement range
+             * @param cov_hit covariance of the measurement
+             * @param rate_short rate of exponential distribution
+             * @return
+             */
             template<typename T>
             T range_finder_beam_model(T x, T x_mean, T x_max, T cov_hit, T rate_short) {
-                T p_hit =   2*stat_pdf_normal_1d(cov_hit, x_mean, x);
+                T p_hit =   2.0 * stat_pdf_normal_1d(cov_hit, x_mean, x);
                 T p_short = ((x >= 0) && (x <= x_mean)) ?
-                        (1/(1-exp(-rate_short))) * stat_pdf_expo_1d(rate_short, x) : 0;
-                T p_max =   (x == x_max ? 1 : 0);
-                T p_rand =  ((x >= 0) && (x < x_max)) ? 1/x_max : 0;
+                        (1.0/(1.0-exp(-rate_short))) * stat_pdf_expo_1d(rate_short, x) : 0.0;
+                T p_max =   (x == x_max ? 1.0 : 0.0);
+                T p_rand =  ((x >= 0) && (x < x_max)) ? 1.0/x_max : 0.0;
                 return p_hit + p_short + p_max  + p_rand;
             }
         }
@@ -1546,6 +1821,29 @@ namespace librobotics {
 
     };
 
+    /**
+     * Polar Scan-match function for Albert Diosi
+     * http://www.irrc.monash.edu.au/adiosi/downloads.html
+     *
+     * @param ref_robot_pose
+     * @param ref_laser_pose
+     * @param ref_scan_ranges
+     * @param refbad
+     * @param refseg
+     * @param act_robot_pose
+     * @param act_laser_pose
+     * @param act_scan_ranges
+     * @param actbad
+     * @param actseg
+     * @param pm_fi
+     * @param pm_co
+     * @param pm_si
+     * @param cfg
+     * @param rel_laser_pose
+     * @param rel_robot_pose
+     * @param force_check
+     * @return
+     */
     template <typename T, typename T2>
     bool lrf_psm(const pose2<T>& ref_robot_pose,
                  const pose2<T>& ref_laser_pose,
@@ -1731,7 +2029,6 @@ namespace librobotics {
                 }//for di
 
                 //now search for the global minimum
-                //later I can make it more robust
                 //assumption: monomodal error function!
                 T emin = 1e6;
                 int imin = 0;
@@ -1993,7 +2290,7 @@ namespace librobotics {
                                    std::vector<T>& h)
             {
                 std::vector<vec2<T> > obstacles(obs);
-                std::sort(obstacles.begin(), obstacles.end(), angle_compare_xy_component<vec2<T> >);
+                std::sort(obstacles.begin(), obstacles.end(), compare_vec2_angle<T>);
 
                 T B = A / max_range;
 
@@ -2233,7 +2530,6 @@ namespace librobotics {
                         img.draw_line(points, color, 0.8f);
                     }
                 }
-
             }
 #endif
         }//vfh
