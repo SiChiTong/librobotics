@@ -965,7 +965,7 @@ namespace librobotics {
                     for(int i = 0; i < step; i++) {
                         result =get_ray_casting_hit_point(x, y, i * angle_res, hit);
                         if(result == 1) {
-                            ray_casting_cache[x][y][i] = sqrt(SQR(x-hit.x) + SQR(y-hit.y)) * resolution;
+                            ray_casting_cache[x][y][i] = sqrt(double(SQR(x-hit.x) + SQR(y-hit.y))) * resolution;
                         } else {
                             ray_casting_cache[x][y][i] = -1;    //no measurement on that direction
                         }
