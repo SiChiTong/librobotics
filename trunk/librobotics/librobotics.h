@@ -770,6 +770,7 @@ namespace librobotics {
         vec2<T> center;     //!< Map center in real world unit (m, mm, cm...)
         T resolution;       //!< Map resolution real world unit/map size unit
         std::vector<std::vector<T> > mapprob; //!< Value of each grid cell
+        std::vector<std::vector<std::vector<T> > > ray_casting_cache;
 
         ///Constructor
         map_grid2() : resolution(1)
@@ -853,6 +854,124 @@ namespace librobotics {
                 return true;
             } else
                 return false;
+        }
+
+        /**
+         * Compute hit point on grid coordinate from the (x,y) grid position from given direction.
+         * Adapt from http://student.kuleuven.be/~m0216922/CG/raycasting.html
+         * @param x grid position
+         * @param y grid position
+         * @param dir ray casting direction
+         * @param hit_grid result of the function
+         * @return -1 if (x,y) not in the map \n
+         *          0 if (x,y) inside occupied \n
+         *          1 if hit \n
+         *          2 if not hit
+         */
+        int get_ray_casting_hit_point(int x, int y, T dir, vec2i& hit_grid) {
+            //outside the map
+            if(!is_inside(x, y))
+                return -1;
+
+            //hit itself
+            if(mapprob[x][y] != 0) {
+                hit_grid = vec2i(x,y);
+                return 0;
+            }
+
+            int mapX = x;
+            int mapY = y;
+            double posX = mapX;
+            double posY = mapY;
+            double rayPosX = posX;
+            double rayPosY = posY;
+            double rayDirX = cos(dir);
+            double rayDirY = sin(dir);
+            double deltaDistX = sqrt(1 + SQR(rayDirY) / SQR(rayDirX));
+            double deltaDistY = sqrt(1 + SQR(rayDirX) / SQR(rayDirY));
+
+            //length of ray from current position to next x or y-side
+            double sideDistX;
+            double sideDistY;
+
+            //what direction to step in x or y-direction (either +1 or -1)
+            int stepX;
+            int stepY;
+
+            int hit = 0; //was there a wall hit?
+            int side; //was a NS or a EW wall hit?
+
+            //calculate step and initial sideDist
+            if (rayDirX < 0) {
+                stepX = -1;
+                sideDistX = (rayPosX - mapX) * deltaDistX;
+            } else {
+                stepX = 1;
+                sideDistX = (mapX + 1.0 - rayPosX) * deltaDistX;
+            }
+            if (rayDirY < 0) {
+                stepY = -1;
+                sideDistY = (rayPosY - mapY) * deltaDistY;
+            } else {
+                stepY = 1;
+                sideDistY = (mapY + 1.0 - rayPosY) * deltaDistY;
+            }
+            //perform DDA
+            while (hit == 0) {
+                //jump to next map square, OR in x-direction, OR in y-direction
+                if (sideDistX < sideDistY) {
+                    sideDistX += deltaDistX;
+                    mapX += stepX;
+                    side = 0;
+                } else {
+                    sideDistY += deltaDistY;
+                    mapY += stepY;
+                    side = 1;
+                }
+
+                //Check if ray is out side map boundary
+                if(!is_inside(mapX, mapY)) return 2; //dose not hit any cell
+
+                //Check if ray has hit
+                if (mapprob[mapX][mapY]> 0) hit = 1;
+            }
+
+            //hit
+            hit_grid.x = mapX;
+            hit_grid.y = mapY;
+            return 1;
+        }
+
+        /**
+         * Pre-compute ray casting result of all unoccupied gird.
+         * @param angle_res ray casting angle resolution in radian
+         */
+        void compute_ray_casting_cache(T angle_res) {
+            if(angle_res <= 0) {
+                throw LibRoboticsRuntimeException("angle_res must > 0");
+            }
+            int step = int((2*M_PI) / angle_res);
+            int result;
+            vec2i hit;
+            ray_casting_cache.resize(mapsize.x);
+            for(int x = 0; x < mapsize.x; x++) {
+                ray_casting_cache[x].resize(mapsize.y);
+                for(int y = 0; y < mapsize.y; y++) {
+                    if(mapprob[x][y] > 0) {
+                        //occupied grid
+                        continue;
+                    }
+                    ray_casting_cache[x][y].resize(step);
+                    for(int i = 0; i < step; i++) {
+                        result =get_ray_casting_hit_point(x, y, i * angle_res, hit);
+                        if(result == 1) {
+                            ray_casting_cache[x][y][i] = sqrt(SQR(x-hit.x) + SQR(y-hit.y)) * resolution;
+                        } else {
+                            ray_casting_cache[x][y][i] = -1;    //no measurement on that direction
+                        }
+                    }
+                }
+            }
         }
 
         /**
@@ -1320,19 +1439,21 @@ namespace librobotics {
      -------------------------------------------------------------------------*/
 
     template<typename T>
-    T stat_pdf_normal_1d(T variance, T mean, T x) {
-        if(variance < 0) {
-            warn("Negative variance: %e", variance);
-            variance = -variance;
-        }
-        if(fabs(variance) <= VERY_SMALL)
-            warn("Very low variance: %e", variance);
-
-        return (1.0/sqrt(2*M_PI*variance)) * exp(-SQR(x - mean) / (2*variance));
+    T stat_pdf_normal_dist(T cov, T mean, T x) {
+        if(cov <= 0) return 0;
+        return (1.0/sqrt(2*M_PI*cov)) * exp(-SQR(x - mean) / (2*cov));
     }
 
     template<typename T>
-    T stat_pdf_expo_1d(T rate, T x) {
+    T stat_pdf_triangular_dist(T cov, T mean, T x) {
+#define SQRT6  (2.449489743)
+        if(cov <= 0) return 0;
+        T v = (1.0/(SQRT6 * sqrt(cov))) - (fabs(x - mean)/(6.0 * cov));
+        return MAX2( 0.0, v);
+    }
+
+    template<typename T>
+    T stat_pdf_exponential_dist(T rate, T x) {
         if(x < 0) return 0;
         return rate * exp(-rate * x);
     }
@@ -1755,35 +1876,67 @@ namespace librobotics {
     /**
      * Namespace for robot mathematics model
      */
-    namespace model {
-
+    namespace math_model {
         /**
-         * Namespace for robot mathematics measurement model
+         * Measurement model for range sensor from CH6 of Probabilistic Robotics book.
+         * http://robots.stanford.edu/probabilistic-robotics/ \n
+         * \f[
+         *   p_{hit}(z_t^k | x_t, m) =
+         *     \left\{
+         *       \begin{array}{ll}
+         *         \eta \mathcal{N}(z_t^k;z_t^{k*},\sigma_{hit}^2) & \textbf{if } 0 \le z_t^k \le z_{max}\\
+         *         0 & \textbf{otherwise}
+         *       \end{array}
+         *     \right.
+         * \f]
+         * @param x measurement data
+         * @param x_mean expected measurement range
+         * @param x_max maximum possible measurement range
+         * @param cov_hit covariance of the measurement
+         * @param rate_short rate of exponential distribution
+         * @return
          */
-        namespace measurement {
-            /**
-             * Measurement model for range sensor from CH6 from Probabilistic Robotics book.
-             * http://robots.stanford.edu/probabilistic-robotics/
-             * @param x measurement data
-             * @param x_mean expected measurement range
-             * @param x_max maximum possible measurement range
-             * @param cov_hit covariance of the measurement
-             * @param rate_short rate of exponential distribution
-             * @return
-             */
-            template<typename T>
-            T range_finder_beam_model(T x, T x_mean, T x_max, T cov_hit, T rate_short) {
-                T p_hit =   2.0 * stat_pdf_normal_1d(cov_hit, x_mean, x);
-                T p_short = ((x >= 0) && (x <= x_mean)) ?
-                        (1.0/(1.0-exp(-rate_short))) * stat_pdf_expo_1d(rate_short, x) : 0.0;
-                T p_max =   (x == x_max ? 1.0 : 0.0);
-                T p_rand =  ((x >= 0) && (x < x_max)) ? 1.0/x_max : 0.0;
-                return p_hit + p_short + p_max  + p_rand;
-            }
+        template<typename T>
+        T beam_range_finder_measurement(T x,
+                                        T x_mean,
+                                        T x_max,
+                                        T cov_hit,
+                                        T rate_short)
+        {
+            T p_hit =   2.0 * stat_pdf_normal_dist(cov_hit, x_mean, x);
+            T p_short = ((x >= 0) && (x <= x_mean)) ?
+                    (1.0/(1.0-exp(-rate_short))) * stat_pdf_exponential_dist(rate_short, x) : 0.0;
+            T p_max =   (x == x_max ? 1.0 : 0.0);
+            T p_rand =  ((x >= 0) && (x < x_max)) ? 1.0/x_max : 0.0;
+            return p_hit + p_short + p_max  + p_rand;
         }
 
-        namespace motion {
-
+        /**
+         * Closed form velocity motion from CH5 of Probabilistic Robotics book.
+         * @param pt    hypothesized pose \f$(x', y', \theta')^T\f$
+         * @param ut    control \f$(v, w)^T\f$
+         * @param p     initial pose \f$(x, y, \theta)^T\f$
+         * @param dt    update time
+         * @param cov   robot specific motion error parameters \f$(\sigma_1 ... \sigma_6) \f$
+         * @return
+         */
+        template<typename T>
+        T velocity_motion(pose2<T> pt,
+                          vec2<T> ut,
+                          pose2<T> p,
+                          T dt,
+                          T cov[6])
+        {
+            T x_x = p.x - pt.x;
+            T y_y = p.y - pt.y;
+            T u = 0.5 * (((x_x*cos(p.a)) + (y_y*sin(p.a))) / ((x_x*cos(p.a)) - (y_y*sin(p.a))));
+            T xx = ((p.x + pt.x)/2) + (u*(p.y - pt.y));
+            T yy = ((p.y + pt.y)/2) + (u*(pt.x - p.x));
+            T ds = sqrt(SQR(p.x - xx) + SQR(p.y - yy));
+            T da = atan2(pt.y - yy, pt.x - xx) - atan2(p.y - yy, p.x - xx);
+            T v = da/dt * ds;
+            T w = da/dt;
+            T r = (pt.a - p.a)/dt * w;
         }
 
     }
@@ -2191,38 +2344,37 @@ namespace librobotics {
          ----------------------------------------------------*/
 
         namespace gridslam {
-
-            struct grid_line_t{
-              int                   numgrids;
-              std::vector<vec2i>    grid;
-              grid_line_t() :
-                  numgrids(0)
-              { }
-            } ;
-
-            struct QUAD_TREE {
-                struct QUAD_TREE*   elem[4];
-                vec2i               center;
-                unsigned char       level;
-                bool                inuse;
-            };
-
-            template<typename T> struct gridmap2 {
-                QUAD_TREE                           qtree;
-                pose2<T>                            offset;
-                T                                   resolution;
-                std::vector<std::vector<bool> >     updated;
-                std::vector<std::vector<T> >        maphit;
-                std::vector<std::vector<int> >      mapsum;
-                std::vector<std::vector<T> >        mapprob;
-                std::vector<std::vector<T> >        calc;
-                vec2i                               mapsize;
-                vec2<T>                             center;
-
-                bool inline isInside(int x, int y) {
-                    return (x >= 0) && (x < mapsize.x) && (y >= 0) && (y < mapsize.y);
-                }
-            };
+//            struct grid_line_t{
+//              int                   numgrids;
+//              std::vector<vec2i>    grid;
+//              grid_line_t() :
+//                  numgrids(0)
+//              { }
+//            } ;
+//
+//            struct QUAD_TREE {
+//                struct QUAD_TREE*   elem[4];
+//                vec2i               center;
+//                unsigned char       level;
+//                bool                inuse;
+//            };
+//
+//            template<typename T> struct gridmap2 {
+//                QUAD_TREE                           qtree;
+//                pose2<T>                            offset;
+//                T                                   resolution;
+//                std::vector<std::vector<bool> >     updated;
+//                std::vector<std::vector<T> >        maphit;
+//                std::vector<std::vector<int> >      mapsum;
+//                std::vector<std::vector<T> >        mapprob;
+//                std::vector<std::vector<T> >        calc;
+//                vec2i                               mapsize;
+//                vec2<T>                             center;
+//
+//                bool inline isInside(int x, int y) {
+//                    return (x >= 0) && (x < mapsize.x) && (y >= 0) && (y < mapsize.y);
+//                }
+//            };
         }
 
         /*----------------------------------------------------
@@ -2244,8 +2396,7 @@ namespace librobotics {
          * Definition of the LibRobotics: EKF Localization in 2D space
          *
          -------------------------------------------------------------*/
-
-        namespace ekf_feature2D {
+        namespace ekf_feature2 {
 
         }
 
@@ -2255,8 +2406,7 @@ namespace librobotics {
          * (for feature map)
          *
          -------------------------------------------------------------*/
-
-        namespace mcl_featureD {
+        namespace mcl_feature2 {
 
         }
 
@@ -2266,10 +2416,23 @@ namespace librobotics {
          * (for grid map)
          *
          -------------------------------------------------------------*/
-
-        namespace mcl_grid2D {
+        namespace mcl_grid2 {
 
         }
+
+        /**
+         * Namespace for grid localization in 2D space
+         */
+        namespace grid2 {
+            template<typename T>
+
+
+            int update() {
+
+            }
+
+        }
+
     }
 
     namespace path_planning {
