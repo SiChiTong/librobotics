@@ -30,17 +30,22 @@ int main(int argc, char** argv) {
     map.load_image("../test_data/map_400_200.png",
                    pose2d(),
                    vec2d(20.0, 10.0),
-                   1.0/10);
+                   0.1);
     map.print_info();
+    map.compute_ray_casting_cache(DEG2RAD(2.0));
 
     CImgDisplay display_main(500,500,"Main Display",0);
     CImgDisplay display_map(100,100,"Map",0);
 
     CImg<unsigned char> map_image = map.get_image();
+    CImg<unsigned char> map_image_tmp;
+
+    cout << math_model::beam_range_finder_measurement(0.5, 0.4, 1.0, 0.1, 0.1) << endl;
 
     display_map.resize(map_image);
     map_image.display(display_map);
-    while(!display_main.is_closed && !display_main.is_keyESC)
+    while(!display_main.is_closed && !display_main.is_keyESC &&
+          !display_map.is_closed && !display_map.is_keyESC)
     {
         CImgDisplay::wait_all();
 
@@ -52,6 +57,45 @@ int main(int argc, char** argv) {
             if(map.get_real_pts(map_mouse_x, map_mouse_y, pts)) {
                 cout << "map_pose:" << pts << " v:" << map.get_grid_value(pts.x, pts.y) << "\n";
             }
+
+            map_image_tmp = map_image;
+            int img_x, img_y;
+            double r;
+            double deg;
+            int step = map.ray_casting_cache[map_mouse_x][map_mouse_y].size();
+            if(step > 0) {
+                double t = utils_get_current_time();
+                for(int i = 0; i < step; i++) {
+                    r = map.ray_casting_cache[map_mouse_x][map_mouse_y][i];
+                    r /= map.resolution;
+                    deg = DEG2RAD(2.0) * i;
+                    img_x = r * cos(deg);
+                    img_y = r * sin(deg);
+
+                    map_image_tmp.draw_line(display_map.mouse_x,
+                                            display_map.mouse_y,
+                                            map_mouse_x + img_x,
+                                            map_image.dimy() - (map_mouse_y + img_y), red);
+                }
+                cout << (utils_get_current_time() - t) << "\n";
+            }
+            map_image_tmp.display(display_map);
+
+            /*
+            vec2i hit;
+            int result;
+            map_image_tmp = map_image;
+            static const int step = 180;
+            for(int i = 0; i < step; i++) {
+                result = map.get_ray_casting_hit_point(map_mouse_x, map_mouse_y, i * (2.0*M_PI/step), hit);
+                PRINTVAR(result);
+                if(result == 1) {
+                    PRINTVAR(hit);
+                    map_image_tmp.draw_line(display_map.mouse_x, display_map.mouse_y, hit.x, map_image.dimy() - hit.y, red);
+                }
+            }
+            map_image_tmp.display(display_map);
+            */
         }
     }
     return 0;
