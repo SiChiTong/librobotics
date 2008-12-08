@@ -769,6 +769,7 @@ namespace librobotics {
         pose2<T> offset;    //!< Map offset in real world unit (m, mm, cm...)
         vec2<T> center;     //!< Map center in real world unit (m, mm, cm...)
         T resolution;       //!< Map resolution real world unit/map size unit
+        T angle_res;
         std::vector<std::vector<T> > mapprob; //!< Value of each grid cell
         std::vector<std::vector<std::vector<T> > > ray_casting_cache;
 
@@ -946,10 +947,11 @@ namespace librobotics {
          * Pre-compute ray casting result of all unoccupied gird.
          * @param angle_res ray casting angle resolution in radian
          */
-        void compute_ray_casting_cache(T angle_res) {
-            if(angle_res <= 0) {
-                throw LibRoboticsRuntimeException("angle_res must > 0");
+        void compute_ray_casting_cache(T _angle_res) {
+            if(_angle_res <= 0) {
+                throw LibRoboticsRuntimeException("angle resolution must > 0");
             }
+            angle_res = _angle_res;
             int step = int((2*M_PI) / angle_res);
             int result;
             vec2i hit;
@@ -1440,8 +1442,9 @@ namespace librobotics {
 
     template<typename T>
     T stat_pdf_normal_dist(T cov, T mean, T x) {
+#define SQRT2PI (2.506628275)
         if(cov <= 0) return 0;
-        return (1.0/sqrt(2*M_PI*cov)) * exp(-SQR(x - mean) / (2*cov));
+        return (1.0/sqrt(2*M_PI*cov)) * exp(-SQR(x - mean) / (2.0 * cov));
     }
 
     template<typename T>
@@ -1901,14 +1904,15 @@ namespace librobotics {
                                         T x_mean,
                                         T x_max,
                                         T cov_hit,
-                                        T rate_short)
+                                        T rate_short,
+                                        T z_hit, T z_short, T z_max, T z_rand)
         {
-            T p_hit =   2.0 * stat_pdf_normal_dist(cov_hit, x_mean, x);
-            T p_short = ((x >= 0) && (x <= x_mean)) ?
-                    (1.0/(1.0-exp(-rate_short))) * stat_pdf_exponential_dist(rate_short, x) : 0.0;
+            T p_hit =   ((x >= 0) && (x <= x_max)) ? stat_pdf_normal_dist(cov_hit, x_mean, x) : 0.0;
+            T p_short = ((x >= 0) && (x <= x_mean)) ? stat_pdf_exponential_dist(rate_short, x) : 0.0;
+            p_short *= 1.0 / (1.0 - exp(-rate_short * x_mean));
             T p_max =   (x == x_max ? 1.0 : 0.0);
             T p_rand =  ((x >= 0) && (x < x_max)) ? 1.0/x_max : 0.0;
-            return p_hit + p_short + p_max  + p_rand;
+            return (z_hit * p_hit) + (z_short * p_short) + (z_max * p_max)  + (z_rand * p_rand);
         }
 
         /**
@@ -1927,16 +1931,43 @@ namespace librobotics {
                           T dt,
                           T cov[6])
         {
+            PRINTVAR(pt);
             T x_x = p.x - pt.x;
             T y_y = p.y - pt.y;
-            T u = 0.5 * (((x_x*cos(p.a)) + (y_y*sin(p.a))) / ((x_x*cos(p.a)) - (y_y*sin(p.a))));
-            T xx = ((p.x + pt.x)/2) + (u*(p.y - pt.y));
-            T yy = ((p.y + pt.y)/2) + (u*(pt.x - p.x));
-            T ds = sqrt(SQR(p.x - xx) + SQR(p.y - yy));
-            T da = atan2(pt.y - yy, pt.x - xx) - atan2(p.y - yy, p.x - xx);
-            T v = da/dt * ds;
-            T w = da/dt;
-            T r = (pt.a - p.a)/dt * w;
+            T tmp0 = ((x_x*cos(p.a)) + (y_y*sin(p.a)));
+            T tmp1 = ((y_y*cos(p.a)) - (x_x*sin(p.a)));
+
+            T u = 0.0;
+            if(tmp1 != 0) {
+                u = 0.5 * (tmp0/tmp1);
+            }
+
+
+            T xx = ((p.x + pt.x) * 0.5) + (u*(p.y - pt.y));
+            T yy = ((p.y + pt.y) * 0.5) + (u*(pt.x - p.x));
+
+            T rr = sqrt(SQR(p.x - xx) + SQR(p.y - yy));
+            T aa = atan2(pt.y - yy, pt.x - xx) - atan2(p.y - yy, p.x - xx);
+
+            T v = aa/dt * rr;
+            T w = aa/dt;
+
+            T v2 = v*v;
+            T w2 = w*w;
+
+            T r = (pt.a - p.a)/dt - w;
+
+            T tmp = (v >= 0) ? (v - ut.x) : (v - ut.x);
+            T p0 = stat_pdf_normal_dist(cov[0]*v2 + cov[1]*w2, 0.0, tmp);
+            PRINTVAR(tmp);
+            PRINTVAR(p0);
+            tmp = (w >= 0) ? (w - ut.y) : (w - ut.y);
+            T p1 = stat_pdf_normal_dist(cov[2]*v2 + cov[3]*w2, 0.0, tmp);
+            PRINTVAR(p1);
+            T p2 = stat_pdf_normal_dist(cov[4]*v2 + cov[5]*w2, 0.0, r);
+            PRINTVAR(p2);
+            PRINTVAR(p0 * p1 * p2);
+            return p0 * p1 * p2;
         }
 
     }
@@ -2425,10 +2456,22 @@ namespace librobotics {
          */
         namespace grid2 {
             template<typename T>
+            struct robot_p {
+
+            };
 
 
-            int update() {
+            template<typename T>
+            int update(const map_grid2<T>& map) {
+                int angle_step = (int)((2.0 * M_PI) / map.angle_res);
+                for(int x = 0; x < map.x; x++) {
+                    for(int y = 0; y < map.y; y++) {
+                        for(int i = 0; i < angle_step; i++) {
 
+                        }
+                    }
+                }
+                return 0;
             }
 
         }

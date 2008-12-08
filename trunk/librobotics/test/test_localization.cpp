@@ -25,6 +25,116 @@ const unsigned char
     gray[] = { 127, 127, 127 },
     white[] = { 255,255,255 };
 
+#define UNIT 1.0
+#define MEAN_Z (2.5*UNIT)
+#define MAX_Z (5.0*UNIT)
+#define SD_MAP (0.168 * UNIT)
+#define SD_US (0.16 * UNIT)
+#define SD_LRF (0.048 * UNIT)
+#define HIT_MAP_COV SQR(SD_MAP)
+#define HIT_US_COV SQR(sqrt(SQR(SD_US) + SQR(SD_MAP)))
+#define HIT_LRF_COV SQR(sqrt(SQR(SD_LRF) + SQR(SD_MAP)))
+#define SHORT_RATE (0.5 / UNIT)
+
+double motion_cov[6] = { 0.1, 0.1, 0.1, 0.1, 0.1, 0.1 };
+double p = 0;
+
+#define TARGET_X 1.0
+#define TARGET_Y 0.0
+#define TARGET_A 0.0
+#define STARTX -5.0
+#define ENDX 5.0
+#define STARTY -5.0
+#define ENDY 5.0
+#define RES 0.2
+
+int main(int argc, char** argv) {
+    ofstream log;
+    log.open("log.dat");
+    double x, y, a;
+    for(int i = (int)(STARTX / RES); i <= (int)(ENDX / RES); i++) {
+        for(int j = (int)(STARTY / RES); j <= (int)(ENDY / RES); j++) {
+            x = i*RES;
+            y = j*RES;
+            p = math_model::velocity_motion(pose2d(x, y, 0.0),
+                                            vec2d(1.0, 0.0),
+                                            pose2d(0.0, 0.0, 0.0),
+                                            1.0,
+                                            motion_cov);
+            log << x << " " << y << " " << p << "\n";
+        }
+    }
+
+
+//    double x, p_hit_map,  p_hit_us, p_hit_lrf, p_short, p;
+//
+//
+//    cout << exp(1) << endl;
+//
+//    log.precision(20);
+//    double lastp = 0.0;
+//    double sum = 0.0;
+//    for(int i = 0; i < 1100; i++) {
+//        x = i * (MAX_Z/1000.0);
+//        //p = stat_pdf_triangular_dist(HIT_MAP_COV, MEAN_Z, x);//stat_pdf_exponential_dist(1.0, x);//stat_pdf_normal_dist(HIT_MAP_COV, MEAN_Z, x);
+//        p = math_model::beam_range_finder_measurement(x, MEAN_Z, MAX_Z, HIT_LRF_COV, SHORT_RATE, 1.0, 1.0, 1.0, 1.0);
+//        sum += (p + lastp) * 0.5 * (MAX_Z/1000.0);
+//        lastp = p;
+//        log << x << " " << p << " " << sum << "\n";
+//    }
+
+
+//    for(int i = 0; i < 1100; i++) {
+//        x = i * (MAX_Z/1000.0);
+//        p_hit_map = stat_pdf_normal_dist(HIT_MAP_COV, MEAN_Z, x);
+//        p_hit_us = stat_pdf_normal_dist(HIT_US_COV, MEAN_Z, x);
+//        p_hit_lrf = stat_pdf_normal_dist(HIT_LRF_COV, MEAN_Z, x);
+//        log << x << " " << p_hit_map << " " << p_hit_us << " " << p_hit_lrf << "\n";
+//    }
+    log.close();
+
+
+//    double p = math_model::beam_range_finder_measurement(0.5, 0.5, 4.0, 0.1, 0.1);
+//    PRINTVAR(p);
+//    cout << "------------\n";
+//    p = math_model::beam_range_finder_measurement(0.4, 0.5, 4.0, 0.1, 0.1);
+//    PRINTVAR(p);
+//    cout << "------------\n";
+//    p = math_model::beam_range_finder_measurement(0.6, 0.5, 4.0, 0.1, 0.1);
+//    PRINTVAR(p);
+//    cout << "------------\n";
+//    p = math_model::beam_range_finder_measurement(3.9, 0.5, 4.0, 0.1, 0.1);
+//    PRINTVAR(p);
+//    cout << "------------\n";
+//    p = math_model::beam_range_finder_measurement(4.0, 0.5, 4.0, 0.1, 0.1);
+//    PRINTVAR(p);
+//    cout << "------------\n";
+//    p = math_model::beam_range_finder_measurement(4.1, 0.5, 4.0, 0.1, 0.1);
+//    PRINTVAR(p);
+//    cout << "------------\n";
+//    p = math_model::beam_range_finder_measurement(0.1, 0.5, 4.0, 0.1, 0.1);
+//    PRINTVAR(p);
+//    cout << "------------\n";
+//    p = math_model::beam_range_finder_measurement(0.0, 0.5, 4.0, 0.1, 0.1);
+//    PRINTVAR(p);
+//    cout << "------------\n";
+//    p = math_model::beam_range_finder_measurement(0.1, 0.5, 4.0, 0.1, 0.1);
+//    PRINTVAR(p);
+//    cout << "------------\n";
+//    p = math_model::beam_range_finder_measurement(0.0, 0.5, 4.0, 0.1, 0.001);
+//    PRINTVAR(p);
+//    cout << "------------\n";
+//    p = math_model::beam_range_finder_measurement(0.04, 0.5, 4.0, 0.1, 1.0);
+//    PRINTVAR(p);
+
+
+
+
+
+    return 0;
+}
+
+/*
 int main(int argc, char** argv) {
     map_grid2d map;
     map.load_image("../test_data/map_400_200.png",
@@ -81,26 +191,26 @@ int main(int argc, char** argv) {
             }
             map_image_tmp.display(display_map);
 
-            /*
-            vec2i hit;
-            int result;
-            map_image_tmp = map_image;
-            static const int step = 180;
-            for(int i = 0; i < step; i++) {
-                result = map.get_ray_casting_hit_point(map_mouse_x, map_mouse_y, i * (2.0*M_PI/step), hit);
-                PRINTVAR(result);
-                if(result == 1) {
-                    PRINTVAR(hit);
-                    map_image_tmp.draw_line(display_map.mouse_x, display_map.mouse_y, hit.x, map_image.dimy() - hit.y, red);
-                }
-            }
-            map_image_tmp.display(display_map);
-            */
+
+//            vec2i hit;
+//            int result;
+//            map_image_tmp = map_image;
+//            static const int step = 180;
+//            for(int i = 0; i < step; i++) {
+//                result = map.get_ray_casting_hit_point(map_mouse_x, map_mouse_y, i * (2.0*M_PI/step), hit);
+//                PRINTVAR(result);
+//                if(result == 1) {
+//                    PRINTVAR(hit);
+//                    map_image_tmp.draw_line(display_map.mouse_x, display_map.mouse_y, hit.x, map_image.dimy() - hit.y, red);
+//                }
+//            }
+//            map_image_tmp.display(display_map);
+
         }
     }
     return 0;
 }
-
+*/
 /*
     map_grid2d map;
     map.load_txt("../test_data/test_map.txt");
