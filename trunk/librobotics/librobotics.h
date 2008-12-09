@@ -233,16 +233,16 @@ T inline norm_a_deg(T a) {
  * Find the minimum different between two input angle in radian unit
  * \param a input angle value
  * \param b input angle value
- * \return minimum different angle
+ * \return minimum different angle (b-a)
  */
 template<typename T>
-T inline angle_min_diff_rad(T a, T b) {
+T inline min_angle_diff(T a, T b) {
     a = norm_a_rad(a);
     b = norm_a_rad(b);
 
     T d_angle = b - a;
 
-    if(fabs(d_angle) > M_PI_2) {
+    if(fabs(d_angle) > M_PI) {
         //wrong direction
         if(d_angle >= 0) {
             d_angle = -((2*M_PI) - d_angle);
@@ -405,22 +405,20 @@ namespace librobotics {
      * Get current time of day
      * \return time in second
      */
+    inline unsigned long utils_get_current_time() {
 #if librobotics_OS == 1
-#include <sys/time.h>
-#include <time.h>
-    inline double utils_get_current_time() {
-        timeval UTILS_SYS_TIME;
-        if (gettimeofday(&UTILS_SYS_TIME, NULL) != 0){
-            throw LibRoboticsRuntimeException("Cannot get time");
-        }
-        return (UTILS_SYS_TIME.tv_sec)  + (UTILS_SYS_TIME.tv_usec * 1e-6);
-    }
+      struct timeval st_time;
+      gettimeofday(&st_time,0);
+      return (unsigned long)(st_time.tv_usec/1000 + st_time.tv_sec*1000);
+#elif librobotics_OS == 2
+      static SYSTEMTIME st_time;
+      GetSystemTime(&st_time);
+      return (unsigned long)(st_time.wMilliseconds + 1000*(st_time.wSecond + 60*(st_time.wMinute + 60*st_time.wHour)));
 #else
-    double utils_get_current_time() {
-        warn("%s is not yet implement on this OS", __FUNCTION__);
-        return 0;
-    }
+      return 0;
 #endif
+    }
+
 
 
 
@@ -1439,26 +1437,95 @@ namespace librobotics {
      * Definition of the LibRobotics: Statistic Functions
      *
      -------------------------------------------------------------------------*/
-
-    template<typename T>
-    T stat_pdf_normal_dist(T cov, T mean, T x) {
-#define SQRT2PI (2.506628275)
-        if(cov <= 0) return 0;
-        return (1.0/sqrt(2*M_PI*cov)) * exp(-SQR(x - mean) / (2.0 * cov));
+    /**
+     * Probability density function (PDF) of the normal distribution.
+     * @param v variance
+     * @param m mean
+     * @param x
+     * @return PDF(x)
+     */
+    inline double stat_pdf_normal_dist(double v, double m, double x) {
+        if(v <= 0) return 0;
+        return (1.0/sqrt(2*M_PI*v)) * exp(-SQR(x - m) / (2.0 * v));
     }
 
-    template<typename T>
-    T stat_pdf_triangular_dist(T cov, T mean, T x) {
-#define SQRT6  (2.449489743)
-        if(cov <= 0) return 0;
-        T v = (1.0/(SQRT6 * sqrt(cov))) - (fabs(x - mean)/(6.0 * cov));
-        return MAX2( 0.0, v);
+    /**
+     * Probability density function (PDF) of the triangular distribution.
+     * @param v
+     * @param m
+     * @param x
+     * @return PDF(x)
+     */
+    inline double stat_pdf_normal_triangular_dist(double v, double m, double x) {
+        //SQRT6 = 2.449489743
+        if(v <= 0) return 0;
+        double p = (1.0/(2.449489743 * sqrt(v))) - (fabs(x - m)/(6.0 * v));
+        return MAX2( 0.0, p);
     }
 
-    template<typename T>
-    T stat_pdf_exponential_dist(T rate, T x) {
+    /**
+     * PDF of the exponential distribution.
+     * @param rate
+     * @param x
+     * @return PDF(x)
+     */
+    inline double stat_pdf_exponential_dist(double rate, double x) {
         if(x < 0) return 0;
         return rate * exp(-rate * x);
+    }
+
+    /**
+     * Use a specific srand initialization to avoid multi-threading problems
+     * (executed only one time for a single program).
+     */
+    inline void  stat_srand() {
+        static bool first_run = true;
+        if(first_run) {
+            std::srand(utils_get_current_time());
+            unsigned char *const rand_mem = new unsigned char[1+std::rand()%2048];
+            std::srand((unsigned int)(std::rand() + (unsigned long)rand_mem));
+            delete[] rand_mem;
+            first_run = false;
+        }
+    }
+
+    /**
+     * Return a random variable between \f$[0,1]\f$ with respect to an uniform distribution.
+     */
+    inline double stat_rand() {
+        return (double)std::rand()/RAND_MAX;
+    }
+
+    /**
+     * Return a random variable between \f$[-1,1]\f$ with respect to an uniform distribution.
+     */
+    inline double stat_crand() {
+        return 1.0 - (2.0 * stat_rand());
+    }
+
+    /**
+     * Sample a random value from (approximate) normal distribution with zero mean.
+     * @param v variance
+     * @return random sample from normal distribution with zero mean
+     */
+    inline double stat_sample_normal_dist(double v) {
+        stat_srand();
+        double sum = 0;
+        for(int i = 0; i < 12; i++) {
+            sum += (stat_crand() * v);
+        }
+        return sum/2.0;
+    }
+
+    /**
+     * Sample a random value from (approximate) triangular distribution with zero mean.
+     * @param v variance
+     * @return random sample from triangular distribution with zero mean
+     */
+    inline double stat_sample_triangular_dist(double v) {
+        //SQRT(6) / 2 = 1.224744871
+        stat_srand();
+        return 1.224744871 * ((stat_crand()*v) +  (stat_crand()*v));
     }
 
 
@@ -1895,79 +1962,203 @@ namespace librobotics {
          * @param x measurement data
          * @param x_mean expected measurement range
          * @param x_max maximum possible measurement range
-         * @param cov_hit covariance of the measurement
+         * @param var_hit variance of the measurement
          * @param rate_short rate of exponential distribution
+         * @param z[4] weighted average for z_hit, z_short, z_max. z_rand and z[0]+z[1]+z[2]+z[3]=1;
          * @return
          */
         template<typename T>
         T beam_range_finder_measurement(T x,
                                         T x_mean,
                                         T x_max,
-                                        T cov_hit,
+                                        T var_hit,
                                         T rate_short,
-                                        T z_hit, T z_short, T z_max, T z_rand)
+                                        T z[4])
         {
-            T p_hit =   ((x >= 0) && (x <= x_max)) ? stat_pdf_normal_dist(cov_hit, x_mean, x) : 0.0;
+            T p_hit =   ((x >= 0) && (x <= x_max)) ? stat_pdf_normal_dist(var_hit, x_mean, x) : 0.0;
             T p_short = ((x >= 0) && (x <= x_mean)) ? stat_pdf_exponential_dist(rate_short, x) : 0.0;
             p_short *= 1.0 / (1.0 - exp(-rate_short * x_mean));
             T p_max =   (x == x_max ? 1.0 : 0.0);
             T p_rand =  ((x >= 0) && (x < x_max)) ? 1.0/x_max : 0.0;
-            return (z_hit * p_hit) + (z_short * p_short) + (z_max * p_max)  + (z_rand * p_rand);
+            return (z[0] * p_hit) + (z[1] * p_short) + (z[2] * p_max)  + (z[3] * p_rand);
         }
 
         /**
-         * Closed form velocity motion from CH5 of Probabilistic Robotics book.
+         * Closed form velocity motion model for compute \f$p(x_t|u_t, x_{t-1})\f$
          * @param pt    hypothesized pose \f$(x', y', \theta')^T\f$
          * @param ut    control \f$(v, w)^T\f$
          * @param p     initial pose \f$(x, y, \theta)^T\f$
          * @param dt    update time
-         * @param cov   robot specific motion error parameters \f$(\sigma_1 ... \sigma_6) \f$
-         * @return
+         * @param var   robot specific motion error parameters \f$(\sigma_1 ... \sigma_6) \f$
+         * @return \f$p(x_t|u_t, x_{t-1})\f$
          */
         template<typename T>
         T velocity_motion(pose2<T> pt,
                           vec2<T> ut,
                           pose2<T> p,
                           T dt,
-                          T cov[6])
+                          T var[6])
         {
             PRINTVAR(pt);
+            PRINTVAR(p);
             T x_x = p.x - pt.x;
             T y_y = p.y - pt.y;
             T tmp0 = ((x_x*cos(p.a)) + (y_y*sin(p.a)));
             T tmp1 = ((y_y*cos(p.a)) - (x_x*sin(p.a)));
 
-            T u = 0.0;
-            if(tmp1 != 0) {
-                u = 0.5 * (tmp0/tmp1);
+            T u, xx, yy, rr, aa, v, w;
+
+            if(ut.y != 0) {
+                u = 0.0;
+                if(tmp1 != 0) {
+                    u = 0.5 * (tmp0/tmp1);
+                }
+
+                //PRINTVAR(u);
+
+                xx = ((p.x + pt.x) * 0.5) + (u*(p.y - pt.y));
+                yy = ((p.y + pt.y) * 0.5) + (u*(pt.x - p.x));
+                PRINTVAR(xx);
+                PRINTVAR(yy);
+
+                rr = sqrt(SQR(p.x - xx) + SQR(p.y - yy));
+                PRINTVAR(rr);
+
+                aa = min_angle_diff(atan2(p.y - yy, p.x - xx), atan2(pt.y - yy, pt.x - xx));
+                PRINTVAR(aa);
+
+                v = aa/dt * rr;
+                w = aa/dt;
+            } else {
+                //Degenerate case (w = 0)
+                //compute v and w directly from position
+                v = (pt.vec() - p.vec()).size() / dt;
+                w = atan2(pt.vec() * p.vec(), pt.vec() ^ p.vec()) / dt;
             }
-
-
-            T xx = ((p.x + pt.x) * 0.5) + (u*(p.y - pt.y));
-            T yy = ((p.y + pt.y) * 0.5) + (u*(pt.x - p.x));
-
-            T rr = sqrt(SQR(p.x - xx) + SQR(p.y - yy));
-            T aa = atan2(pt.y - yy, pt.x - xx) - atan2(p.y - yy, p.x - xx);
-
-            T v = aa/dt * rr;
-            T w = aa/dt;
 
             T v2 = v*v;
             T w2 = w*w;
+            T r = min_angle_diff(w, min_angle_diff(p.a, pt.a)/dt);
 
-            T r = (pt.a - p.a)/dt - w;
+            PRINTVAR(v);
+            PRINTVAR(w);
+            PRINTVAR(v - ut.x);
+            PRINTVAR(w - ut.y);
+            PRINTVAR(r);
 
-            T tmp = (v >= 0) ? (v - ut.x) : (v - ut.x);
-            T p0 = stat_pdf_normal_dist(cov[0]*v2 + cov[1]*w2, 0.0, tmp);
-            PRINTVAR(tmp);
+            T tmp = fabs(v) - fabs(ut.x);
+            T p0 = stat_pdf_normal_dist(var[0]*v2 + var[1]*w2, 0.0, tmp);
             PRINTVAR(p0);
-            tmp = (w >= 0) ? (w - ut.y) : (w - ut.y);
-            T p1 = stat_pdf_normal_dist(cov[2]*v2 + cov[3]*w2, 0.0, tmp);
+            //tmp = fabs(w) - fabs(ut.y);
+            tmp = min_angle_diff(ut.y, w);
+            T p1 = stat_pdf_normal_dist(var[2]*v2 + var[3]*w2, 0.0, tmp);
             PRINTVAR(p1);
-            T p2 = stat_pdf_normal_dist(cov[4]*v2 + cov[5]*w2, 0.0, r);
+            T p2 = stat_pdf_normal_dist(var[4]*v2 + var[5]*w2, 0.0, r);
             PRINTVAR(p2);
-            PRINTVAR(p0 * p1 * p2);
             return p0 * p1 * p2;
+        }
+
+
+        /**
+         * Sample base velocity motion model for sampling pose \f$x_t = (x',y',\theta')^T\f$
+         * from give initial pose and control.
+         * @param ut control \f$(v, w)^T\f$
+         * @param p initial pose \f$(x, y, \theta)^T\f$
+         * @param dt update time
+         * @param var robot specific motion error parameters \f$(\sigma_1 ... \sigma_6) \f$
+         * @return pose \f$x_t = (x',y',\theta')^T\f
+         */
+        template<typename T>
+        pose2<T> velocity_model_sample(vec2<T> ut,
+                                       pose2<T> p,
+                                       T dt,
+                                       T var[6])
+        {
+            T v2 = SQR(ut.x);
+            T w2 = SQR(ut.y);
+            T v = ut.x + stat_sample_normal_dist(var[0]*v2 + var[1]*w2);
+            T w = ut.y + stat_sample_normal_dist(var[2]*v2 + var[3]*w2);
+            T r = stat_sample_normal_dist(var[4]*v2 + var[5]*w2);
+
+            T x, y, a, v_w;
+            if(w != 0) {
+                v_w = v/w;
+                x = p.x - v_w*sin(p.a) + v_w*sin(p.a + w*dt);
+                y = p.y + v_w*cos(p.a) - v_w*cos(p.a + w*dt);
+                a = norm_a_rad(p.a + w*dt + r*dt);
+            } else {
+                x = p.x + v*cos(p.a);
+                y = p.y + v*sin(p.a);
+                a = norm_a_rad(p.a + r*dt);
+            }
+            return pose2<T>(x, y, a);
+        }
+
+        /**
+         *
+         * @param pt
+         * @param u_pt
+         * @param u_p
+         * @param p
+         * @param var
+         * @return
+         */
+        template<typename T>
+        T odometry_motion(pose2<T> pt,
+                          pose2<T> u_pt,
+                          pose2<T> u_p,
+                          pose2<T> p,
+                          T var[6])
+        {
+            T rot1 = min_angle_diff(u_p.a, atan2(u_pt.y - u_p.y, u_pt.x - u_p.x));
+            T tran = (u_pt.vec() - u_p.vec()).size();
+            T rot2 = min_angle_diff(rot1, min_angle_diff(u_p.a, u_pt.a));
+
+            T nrot1 = min_angle_diff(p.a, atan2(pt.y - p.y, pt.x - p.x));
+            T ntran = (pt.vec() - p.vec()).size();
+            T nrot2 = min_angle_diff(nrot1, min_angle_diff(p.a, pt.a));
+
+            T nrot1_sqr = SQR(nrot1);
+            T ntran_sqr = SQR(ntran);
+            T nrot2_sqr = SQR(nrot2);
+
+            T p0 = stat_pdf_normal_dist(var[0]*nrot1_sqr + var[1]*ntran_sqr, 0.0, min_angle_diff(nrot1, rot1));
+            T p1 = stat_pdf_normal_dist(var[2]*ntran_sqr + var[3]*nrot1_sqr + var[3]*nrot2_sqr , 0.0, tran - ntran);
+            T p2 = stat_pdf_normal_dist(var[0]*nrot2_sqr + var[1]*ntran_sqr, 0.0, min_angle_diff(nrot2, rot2));
+
+            return p0 * p1 * p2;
+        }
+
+        /**
+         *
+         * @param u_pt
+         * @param u_p
+         * @param p
+         * @param var
+         * @return
+         */
+        template<typename T>
+        pose2<T> odometry_motion_sample(pose2<T> u_pt,
+                                        pose2<T> u_p,
+                                        pose2<T> p,
+                                        T var[4])
+        {
+            T rot1 = min_angle_diff(u_p.a, atan2(u_pt.y - u_p.y, u_pt.x - u_p.x));
+            T tran = (u_pt.vec() - u_p.vec()).size();
+            T rot2 = min_angle_diff(rot1, min_angle_diff(u_p.a, u_pt.a));
+
+            T rot1_sqr = SQR(rot1);
+            T tran_sqr = SQR(tran);
+            T rot2_sqr = SQR(rot2);
+
+            T nrot1 = rot1 + stat_sample_normal_dist(var[0]*rot1_sqr + var[1]*tran_sqr);
+            T ntran = tran + stat_sample_normal_dist(var[2]*tran_sqr + var[3]*rot1_sqr + var[3]*rot2_sqr);
+            T nrot2 = rot2 + stat_sample_normal_dist(var[0]*rot2_sqr + var[1]*tran_sqr);
+
+            T x = p.x + ntran*cos(p.a + nrot1);
+            T y = p.y + ntran*sin(p.a + nrot1);
+            T a = norm_a_rad(p.a + nrot1 + nrot2);
+            return pose2<T>(x, y, a);
         }
 
     }
