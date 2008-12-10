@@ -25,44 +25,73 @@ const unsigned char
     gray[] = { 127, 127, 127 },
     white[] = { 255,255,255 };
 
-#define UNIT 1.0
-#define MEAN_Z (2.5*UNIT)
-#define MAX_Z (5.0*UNIT)
-#define SD_MAP (0.168 * UNIT)
-#define SD_US (0.16 * UNIT)
-#define SD_LRF (0.048 * UNIT)
-#define HIT_MAP_COV SQR(SD_MAP)
-#define HIT_US_COV SQR(sqrt(SQR(SD_US) + SQR(SD_MAP)))
-#define HIT_LRF_COV SQR(sqrt(SQR(SD_LRF) + SQR(SD_MAP)))
-#define SHORT_RATE (0.5 / UNIT)
 
-double motion_cov[6] = { 0.01, 0.0, 0.1, 0.0, 0.01, 0.0 };
-double odo_cov[4] = { 0.05, 0.2,
-                      0.01, 0.01};
+int main(int argc, char* argv[]) {
+    localization::mcl_grid2::configuration<double> mcl_cfg;
+    mcl_cfg.load("../test_data/mcl_grid2d.txt");
+
+    localization::mcl_grid2::data<double> mcl_data;
+    mcl_data.initialize(mcl_cfg);
 
 
-#define TARGET_X 1.0
-#define TARGET_Y 0.0
-#define TARGET_A 0.0
-#define STARTX -2.0
-#define ENDX 2.0
-#define STARTY -2.0
-#define ENDY 2.0
-#define RES 0.3
-#define U -2.0
-#define W (M_PI)
-
-int main(int argc, char** argv) {
-    ofstream log;
-    log.open("log.dat");
 
 
-    pose2d u_pt(-1.0, 0.5, 1.0);
-    pose2d u_p(0.0, 0.0, 0.0);
-    pose2d pstart(0.0, 0.0, 0.0);
 
-    pose2d pose;
-    double p;
+
+
+
+}
+
+
+
+//#define UNIT 1.0
+//#define MEAN_Z (2.5*UNIT)
+//#define MAX_Z (5.0*UNIT)
+//#define SD_MAP (0.168 * UNIT)
+//#define SD_US (0.16 * UNIT)
+//#define SD_LRF (0.048 * UNIT)
+//#define HIT_MAP_COV SQR(SD_MAP)
+//#define HIT_US_COV SQR(sqrt(SQR(SD_US) + SQR(SD_MAP)))
+//#define HIT_LRF_COV SQR(sqrt(SQR(SD_LRF) + SQR(SD_MAP)))
+//#define SHORT_RATE (0.5 / UNIT)
+//
+//double motion_cov[6] = { 0.01, 0.001,
+//                         0.01, 0.001,
+//                         0.01, 0.001 };
+//double odo_cov[4] = { 0.05, 0.2,
+//                      0.01, 0.01};
+//
+//
+//#define TARGET_X 1.0
+//#define TARGET_Y 0.0
+//#define TARGET_A 0.0
+//#define STARTX -5.0
+//#define ENDX 5.0
+//#define STARTY -5.0
+//#define ENDY 5.0
+//#define RES 0.4
+//#define U 3.0
+//#define W 0.0
+
+//int main(int argc, char** argv) {
+//    ofstream log;
+//    log.open("log.dat");
+
+
+
+
+
+
+
+
+
+
+//    pose2d u_pt(-1.0, 0.5, 0.0);
+//    pose2d u_p(0.0, 0.0, 0.0);
+//    pose2d pstart(0.0, 0.0, 0.0);
+//
+//    pose2d pose;
+//    double p;
 
 //    for(int i = 0; i < 100; i++) {
 //        pose  = math_model::odometry_motion_sample(u_pt, u_p, pstart, odo_cov);
@@ -72,16 +101,17 @@ int main(int argc, char** argv) {
 //    }
 
 
-
-    for(int i = 0; i < 500; i++) {
-        pose = math_model::velocity_model_sample(vec2d(U, W), pstart, 1.0, motion_cov);
-        p = math_model::velocity_motion(pose,
-                                        vec2d(U, W),
-                                        pstart,
-                                        1.0,
-                                        motion_cov);
-        log << pose << " " << p <<"\n";
-    }
+//    for(int t = 1; t <= 10; t++) {
+//        for(int i = 0; i < 10000; i++) {
+//            pose = math_model::velocity_model_sample(vec2d(U, W), pstart, 1.0, motion_cov);
+//            p = math_model::velocity_motion(pose,
+//                                            vec2d(U, W),
+//                                            pstart,
+//                                            1.0,
+//                                            motion_cov);
+//            log << pose << " " << p <<"\n";
+//        }
+//    }
 
 
 
@@ -95,15 +125,17 @@ int main(int argc, char** argv) {
 //            for(int k = -90; k < 90; k++) {
 //                x = i*RES;
 //                y = j*RES;
-//                a = DEG2RAD(k*2);
+//                a = DEG2RAD(2.0*k);
 //                p = math_model::velocity_motion(pose2d(x, y, a),
-//                                                vec2d(1.0, 0.0),
+//                                                vec2d(-2.0, 0.5),
 //                                                pose2d(0.0, 0.0, 0.0),
 //                                                1.0,
 //                                                motion_cov);
+//                if(p > 0.1)
 //                log << x << " " << y << " " << a << " " << p << "\n";
 //            }
 //            log << "\n";
+//
 //        }
 //
 //    }
@@ -134,7 +166,7 @@ int main(int argc, char** argv) {
 //        p_hit_lrf = stat_pdf_normal_dist(HIT_LRF_COV, MEAN_Z, x);
 //        log << x << " " << p_hit_map << " " << p_hit_us << " " << p_hit_lrf << "\n";
 //    }
-    log.close();
+//    log.close();
 
 
 //    double p = math_model::beam_range_finder_measurement(0.5, 0.5, 4.0, 0.1, 0.1);
@@ -173,9 +205,9 @@ int main(int argc, char** argv) {
 
 
 
-
-    return 0;
-}
+//
+//    return 0;
+//}
 
 /*
 int main(int argc, char** argv) {

@@ -1,0 +1,10 @@
+../test_data/map_400_200.png  		#map file name
+0.0 0.0 0.0		#map offset
+20.0 10.0		#map center
+0.1				#map resolution (1px / 0.1m)
+2.0				#ray casting cache angle pre step (degree)
+100		#number of particles
+0.1 	#odometry var[0]
+0.2 	#odometry var[1]
+0.2 	#odometry var[2]
+0.3		#odometry var[3]
