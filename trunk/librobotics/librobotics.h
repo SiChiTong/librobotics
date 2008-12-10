@@ -273,6 +273,13 @@ T inline min_angle_diff(T a, T b) {
         throw LibRoboticsIOException("Cannot open: %s", n.c_str()); \
     }
 
+//load configuration from text file
+#define load_cfg_from_text_file(x, f)   \
+    f >> x; \
+    PRINTVAR(x); \
+    getline(f,tmp);
+
+
 //check vector size
 #define check_vsize2(v0, v1)                  (v0.size() == v1.size())
 #define check_vsize3(v0, v1, v2)              (check_vsize2(v0,v1) && check_vsize2(v0,v2))
@@ -1052,6 +1059,7 @@ namespace librobotics {
                 throw LibRoboticsIOException(e.message);
             }
 
+
             mapsize.x = img.dimx();
             mapsize.y = img.dimy();
             offset = offset;
@@ -1062,7 +1070,6 @@ namespace librobotics {
                 resolution = 1.0;
             }
             center /= resolution;
-            PRINTVAR(center);
             mapprob.resize(mapsize.x);
             for(int i = 0; i < mapsize.x; i++) {
                 mapprob[i].resize(mapsize.y);
@@ -1070,6 +1077,15 @@ namespace librobotics {
                     mapprob[i][j] = (255 - img(i, j, 0)) / 255.0;
                 }
             }
+
+            std::cout << "======= Map Setting =======\n";
+            PRINTVAR(filename);
+            PRINTVAR(mapsize);
+            PRINTVAR(offset);
+            PRINTVAR(center);
+            PRINTVAR(resolution);
+            std::cout << "===========================\n";
+
         }
 
         /**
@@ -1999,62 +2015,48 @@ namespace librobotics {
                           T dt,
                           T var[6])
         {
-            PRINTVAR(pt);
-            PRINTVAR(p);
             T x_x = p.x - pt.x;
             T y_y = p.y - pt.y;
             T tmp0 = ((x_x*cos(p.a)) + (y_y*sin(p.a)));
             T tmp1 = ((y_y*cos(p.a)) - (x_x*sin(p.a)));
-
             T u, xx, yy, rr, aa, v, w;
 
-            if(ut.y != 0) {
-                u = 0.0;
-                if(tmp1 != 0) {
-                    u = 0.5 * (tmp0/tmp1);
-                }
-
-                //PRINTVAR(u);
-
-                xx = ((p.x + pt.x) * 0.5) + (u*(p.y - pt.y));
-                yy = ((p.y + pt.y) * 0.5) + (u*(pt.x - p.x));
-                PRINTVAR(xx);
-                PRINTVAR(yy);
-
-                rr = sqrt(SQR(p.x - xx) + SQR(p.y - yy));
-                PRINTVAR(rr);
-
-                aa = min_angle_diff(atan2(p.y - yy, p.x - xx), atan2(pt.y - yy, pt.x - xx));
-                PRINTVAR(aa);
-
-                v = aa/dt * rr;
-                w = aa/dt;
-            } else {
-                //Degenerate case (w = 0)
-                //compute v and w directly from position
-                v = (pt.vec() - p.vec()).size() / dt;
-                w = atan2(pt.vec() * p.vec(), pt.vec() ^ p.vec()) / dt;
+            u = 0.0;
+            if(tmp1 != 0) {
+                u = 0.5 * (tmp0/tmp1);
             }
+
+            //compute center and radius of the circle
+            xx = ((p.x + pt.x) * 0.5) + (u*(p.y - pt.y));
+            yy = ((p.y + pt.y) * 0.5) + (u*(pt.x - p.x));
+            rr = sqrt(SQR(pt.x - xx) + SQR(pt.y - yy));
+
+            aa = min_angle_diff(atan2(p.y - yy, p.x - xx), atan2(pt.y - yy, pt.x - xx));
+            v = aa/dt * rr;
+
+            if(ut.x >= 0) {
+                if(SIGN(yy) == SIGN(aa))
+                    v = SIGN(ut.x) * fabs(v);   //check sign with control input
+                else
+                    return 0;
+            } else {
+                if(SIGN(yy) != SIGN(aa))
+                    v = SIGN(ut.x) * fabs(v);   //check sign with control input
+                else
+                    return 0;
+            }
+
+            w = aa/dt;
 
             T v2 = v*v;
             T w2 = w*w;
-            T r = min_angle_diff(w, min_angle_diff(p.a, pt.a)/dt);
+            T r = min_angle_diff(w, (pt.a - p.a)/dt);
 
-            PRINTVAR(v);
-            PRINTVAR(w);
-            PRINTVAR(v - ut.x);
-            PRINTVAR(w - ut.y);
-            PRINTVAR(r);
 
-            T tmp = fabs(v) - fabs(ut.x);
-            T p0 = stat_pdf_normal_dist(var[0]*v2 + var[1]*w2, 0.0, tmp);
-            PRINTVAR(p0);
-            //tmp = fabs(w) - fabs(ut.y);
-            tmp = min_angle_diff(ut.y, w);
-            T p1 = stat_pdf_normal_dist(var[2]*v2 + var[3]*w2, 0.0, tmp);
-            PRINTVAR(p1);
+            T p0 = stat_pdf_normal_dist(var[0]*v2 + var[1]*w2, 0.0, v - ut.x);
+            T p1 = stat_pdf_normal_dist(var[2]*v2 + var[3]*w2, 0.0, min_angle_diff(ut.y, w));
             T p2 = stat_pdf_normal_dist(var[4]*v2 + var[5]*w2, 0.0, r);
-            PRINTVAR(p2);
+
             return p0 * p1 * p2;
         }
 
@@ -2095,7 +2097,7 @@ namespace librobotics {
         }
 
         /**
-         *
+         * Odometry motion model
          * @param pt
          * @param u_pt
          * @param u_p
@@ -2130,7 +2132,7 @@ namespace librobotics {
         }
 
         /**
-         *
+         * Sample based odometry motion model
          * @param u_pt
          * @param u_p
          * @param p
@@ -2639,7 +2641,92 @@ namespace librobotics {
          *
          -------------------------------------------------------------*/
         namespace mcl_grid2 {
+            template<typename T>
+            struct configuration {
+                std::string mapfile;
+                pose2<T> map_offset;
+                vec2<T> map_center;
+                T map_res;
+                T map_angle_res;
 
+                int n_particles;
+                T odo_motion_var[4];
+
+                /**
+                 * Simple load a configuration from text file
+                 * @param filename
+                 */
+                void load(const std::string& filename) {
+                    std::ifstream file;
+                    file.open(filename.c_str());
+                    if(!file.is_open()) {
+                        throw LibRoboticsIOException("Cannot load file %s in %s", filename.c_str(), __FUNCTION__);
+                    }
+
+                    std::string tmp;    //dummy date for load_cfg_from_text_file
+                    std::cout << "======= mcl_grid2::configuration =======\n";
+                    load_cfg_from_text_file(mapfile, file);
+                    load_cfg_from_text_file(map_offset, file);
+                    load_cfg_from_text_file(map_center, file);
+                    load_cfg_from_text_file(map_res, file);
+                    load_cfg_from_text_file(map_angle_res, file);
+                    map_angle_res = DEG2RAD(map_angle_res);
+
+                    load_cfg_from_text_file(n_particles, file);
+
+                    load_cfg_from_text_file(odo_motion_var[0], file);
+                    load_cfg_from_text_file(odo_motion_var[1], file);
+                    load_cfg_from_text_file(odo_motion_var[2], file);
+                    load_cfg_from_text_file(odo_motion_var[3], file);
+                    std::cout << "========================================\n";
+
+
+                    file.close();
+                }
+            };
+
+
+            template<typename T>
+            struct particle {
+                pose2<T> pose;
+                T w;
+                particle() : w(0) { }
+            };
+
+            template<typename T>
+            struct data {
+                std::vector<mcl_grid2::particle<T> > p;
+                std::vector<mcl_grid2::particle<T> > p_tmp;
+                map_grid2<T> map;
+                pose2<T> last_odo_pose;
+
+                void initialize(mcl_grid2::configuration<T>& cfg) {
+                    p.resize(cfg.n_particles);
+                    p_tmp.resize(cfg.n_particles);
+                    map.load_image(cfg.mapfile,
+                                   cfg.map_offset,
+                                   cfg.map_center,
+                                   cfg.map_res);
+                }
+            };
+
+            template<typename T>
+            int update_with_odomety(mcl_grid2::configuration<T>& cfg,
+                                    mcl_grid2::data<T>& data,
+                                    std::vector<vec2<T> > z,
+                                    pose2<T> odo_pose)
+            {
+                for(int i = 0; i < cfg.n_particles; i++) {
+                    data.p_tmp[i].pose =
+                        math_model::odometry_motion_sample(odo_pose,
+                                                           data.last_odo_pose,
+                                                           data.p[i].pose,
+                                                           cfg.odo_motion_var);
+                }
+
+
+                return 0;
+            }
         }
 
         /**
@@ -2647,7 +2734,7 @@ namespace librobotics {
          */
         namespace grid2 {
             template<typename T>
-            struct robot_p {
+            struct grid2_data {
 
             };
 
