@@ -16,6 +16,8 @@ using namespace std;
 using namespace librobotics;
 using namespace cimg_library;
 
+#define ZOOM_FACTOR 3
+
 const unsigned char
     red[] = { 255,0,0 }, green[] = { 0,255,0 }, blue[] = { 0,0,255 },
     red_drak[] = { 127,0,0 }, green_drak[] = { 0,127,0 }, blue_drak[] = { 0,0,127 },
@@ -25,21 +27,164 @@ const unsigned char
     gray[] = { 127, 127, 127 },
     white[] = { 255,255,255 };
 
+vec2i disp_map_mouse;
+vec2d disp_map_mouse_pose;
+vec2i disp_map_z_mouse;
+vec2d disp_map_z_mouse_pose;
+
+#define SET_POSE_STATE_NONE     0
+#define SET_POSE_STATE_DRAG     1
+#define SET_POSE_STATE_ANGLE    2
+
+int set_pose_state = SET_POSE_STATE_NONE;
+pose2d set_pose_pose;
+
+
+
+localization::mcl_grid2::configuration<double> mcl_cfg;
+localization::mcl_grid2::data<double> mcl_data;
+
+
+
+
+
+
+
+void draw_robot(CImg<unsigned char>& img, const pose2d& pose, double size, double zoom) {
+    vec2i grid_pose, grid_vec;
+    mcl_data.map.get_grid_coordinate(pose.x, pose.y, grid_pose);
+    grid_pose *= zoom;
+    grid_pose.y = img.dimy() - grid_pose.y;
+    img.draw_circle(grid_pose.x, grid_pose.y, (size/mcl_data.map.resolution)*zoom, red);
+
+    vec2d v = vec2d(size,0.0).rot(pose.a) + pose.vec();
+    mcl_data.map.get_grid_coordinate(v.x, v.y, grid_vec);
+    grid_vec *= zoom;
+    grid_vec.y = img.dimy() - grid_vec.y;
+    img.draw_arrow(grid_pose.x, grid_pose.y, grid_vec.x, grid_vec.y, black);
+}
 
 int main(int argc, char* argv[]) {
-    localization::mcl_grid2::configuration<double> mcl_cfg;
     mcl_cfg.load("../test_data/mcl_grid2d.txt");
-
-    localization::mcl_grid2::data<double> mcl_data;
     mcl_data.initialize(mcl_cfg);
+    mcl_data.map.compute_ray_casting_cache(mcl_cfg.map_angle_res);
 
 
+    CImg<unsigned char> map_image = mcl_data.map.get_image();
+    CImg<unsigned char> map_image_z =
+        (+map_image).resize(map_image.dimx() * ZOOM_FACTOR, map_image.dimy() * ZOOM_FACTOR);
+    CImg<unsigned char> map_image_tmp;
+
+    CImgDisplay disp_map(map_image.dimx(), map_image.dimy(),"Map",0);
+    CImgDisplay disp_map_z(map_image_z.dimx(), map_image_z.dimy(),"Map-Zoom",0);
+
+    map_image.display(disp_map);
+    map_image_z.display(disp_map_z);
+
+    while(!disp_map.is_closed  && !disp_map.is_keyESC &&
+          !disp_map_z.is_closed  && !disp_map_z.is_keyESC)
+    {
+        CImgDisplay::wait_all();
+
+        //copy tmp image
+        map_image_tmp = map_image_z;
+
+        if(disp_map.mouse_x >= 0 && disp_map.mouse_y >= 0) {
+            disp_map_mouse.x = disp_map.mouse_x;
+            disp_map_mouse.y = disp_map.dimy() - disp_map.mouse_y;
+//            PRINTVAR(disp_map_mouse);
+            disp_map_mouse_pose = (disp_map_mouse - mcl_data.map.center) * mcl_data.map.resolution;
+//            PRINTVAR(disp_map_mouse_pose);
+            disp_map.set_title("Map: %6.3f %6.3f", disp_map_mouse_pose.x, disp_map_mouse_pose.y);
+        }
+
+        if(disp_map_z.mouse_x >= 0 && disp_map_z.mouse_y >= 0) {
+            disp_map_z_mouse.x = disp_map_z.mouse_x;
+            disp_map_z_mouse.y = disp_map_z.dimy() - disp_map_z.mouse_y;
+//            PRINTVAR(disp_map_z_mouse);
+            disp_map_z_mouse_pose = ((disp_map_z_mouse * (1.0/ZOOM_FACTOR)) - mcl_data.map.center) * mcl_data.map.resolution;
+//            PRINTVAR(disp_map_z_mouse_pose);
+            disp_map_z.set_title("Map-Zoom: %6.3f %6.3f", disp_map_z_mouse_pose.x, disp_map_z_mouse_pose.y);
+
+//            PRINTVAR(disp_map_z.button);
+//            PRINTVAR(disp_map_z.key);
+//            PRINTVAR(disp_map_z.released_key);
+//            PRINTVAR(disp_map_z.buttons[0]);
+//            PRINTVAR(disp_map_z.buttons[1]);
+//            PRINTVAR(disp_map_z.buttons[2]);
+
+            switch(disp_map_z.button) {
+                case 0: //release all btn
+                    if(set_pose_state == SET_POSE_STATE_DRAG) {
+                        PRINTVAR(set_pose_pose);
+                        set_pose_state = SET_POSE_STATE_NONE;
+                    }
+                    break;
+                case 1: //left btn
+                    switch(set_pose_state) {
+                        case SET_POSE_STATE_NONE:
+                            //set position
+                            set_pose_pose.x = disp_map_z_mouse_pose.x;
+                            set_pose_pose.y = disp_map_z_mouse_pose.y;
+                            set_pose_state = SET_POSE_STATE_DRAG;
+                            cout << "Set position at: " << set_pose_pose << "\n";
+                            draw_robot(map_image_tmp, set_pose_pose, 0.25, ZOOM_FACTOR);
+                            map_image_tmp.display(disp_map_z);
+                            break;
+                        case SET_POSE_STATE_DRAG:
+                            vec2d v = disp_map_z_mouse_pose - set_pose_pose.vec();
+                            set_pose_pose.a = v.theta();
+                            set_pose_state = SET_POSE_STATE_DRAG;
+                            cout << "With angle : " << set_pose_pose << "\n";
+                            draw_robot(map_image_tmp, set_pose_pose, 0.25, ZOOM_FACTOR);
+                            map_image_tmp.display(disp_map_z);
+                            break;
+                    }
+                    break;
+                case 2: //right btn
+                    {
+                        //get measurement from current grid
+                        int img_x, img_y;
+                        double r;
+                        double rad;
+                        vec2i grid;
+                        if(!mcl_data.map.get_grid_coordinate(disp_map_z_mouse_pose.x, disp_map_z_mouse_pose.y, grid))
+                            break;
+                        if(mcl_data.map.ray_casting_cache[grid.x][grid.y].size() != 0) {
+                            for(int i = 0; i < mcl_data.map.angle_step; i++) {
+                                r = mcl_data.map.ray_casting_cache[grid.x][grid.y][i];
+                                //if(r > mcl_cfg.z_max_range) continue;
+
+                                r /= mcl_data.map.resolution;
+                                rad = mcl_data.map.angle_res * i;
+                                img_x = r * cos(rad) * ZOOM_FACTOR;
+                                img_y = r * sin(rad) * ZOOM_FACTOR;
 
 
+                                map_image_tmp.draw_line(disp_map_z.mouse_x,
+                                                        disp_map_z.mouse_y,
+                                                        disp_map_z_mouse.x + img_x,
+                                                        map_image_z.dimy() - (disp_map_z_mouse.y + img_y), red);
+                            }
+                        }
+                        map_image_tmp.draw_circle(disp_map_z.mouse_x, disp_map_z.mouse_y, (int)(mcl_cfg.z_max_range/mcl_cfg.map_res)*ZOOM_FACTOR, green, 1.0, 5);
+
+                        map_image_tmp.display(disp_map_z);
+                    }
+                    break;
+                case 4: //mid btn
+                case 3: //left-right btn
+                case 5: //left-mid btn
+                case 6: //mid-right btn
+                case 7: //all btn
+                default:
+                    break;
+            }
+        }
+    }
 
 
-
-
+    return 0;
 }
 
 

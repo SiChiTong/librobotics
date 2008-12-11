@@ -2,10 +2,10 @@
  *  File(s)     : document.h (C++ header)
  *
  *  Description : The C++ Robotics Library.
- *                This file is main documentation file for the library
+ *                This file is a main documentation file of the library
  *                ( http://code.google.com/p/librobotics/ )
  *
- *  Created on  : Dec 24, 2008
+ *  Created on  : Dec 4, 2008
  *      Author  : Mahisorn Wongphati
  *
  *  Copyright (c) <2008> <Mahisorn Wongphati>

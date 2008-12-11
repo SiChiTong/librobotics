@@ -132,9 +132,7 @@
 //
 // Define 'librobotics_debug' to : 0 to hide debug messages (quiet mode, but exceptions are still thrown).
 //                          1 to display debug messages on standard error (stderr).
-//                          2 to display debug messages with dialog windows (default behavior).
-//                          3 to do as 1 + add extra warnings (may slow down the code !).
-//                          4 to do as 2 + add extra warnings (may slow down the code !).
+//                          2 to do as 1 + add extra warnings (may slow down the code !).
 //
 // Define 'librobotics_strict_warnings' to replace warning messages by exception throwns.
 //
@@ -142,7 +140,7 @@
 //
 
 //#define librobotics_strict_warnings
-#define librobotics_use_vt100
+//#define librobotics_use_vt100
 
 #ifndef librobotics_debug
 #define librobotics_debug 2
@@ -501,14 +499,14 @@ namespace librobotics {
 
         ///Multiply by scalar value
         template<typename T1>
-        vec2 operator * (const T1& s) const {
-            return vec2(x*s, y*s);
+        vec2<T1> operator * (const T1& s) const {
+            return vec2<T1>(x*s, y*s);
         }
 
         ///Divide by scalar value
         template<typename T1>
-        vec2 operator / (const T1& s) const {
-            return vec2(x/s, y/s);
+        vec2<T1> operator / (const T1& s) const {
+            return vec2<T1>(x/s, y/s);
         }
 
         ///Assignment by multiply with scalar value
@@ -775,6 +773,7 @@ namespace librobotics {
         vec2<T> center;     //!< Map center in real world unit (m, mm, cm...)
         T resolution;       //!< Map resolution real world unit/map size unit
         T angle_res;
+        int angle_step;
         std::vector<std::vector<T> > mapprob; //!< Value of each grid cell
         std::vector<std::vector<std::vector<T> > > ray_casting_cache;
 
@@ -827,7 +826,12 @@ namespace librobotics {
         bool get_grid_coordinate(T x, T y, vec2i& v) {
             v.x = (int)(center.x + (int)ROUND((x-offset.x)/resolution));
             v.y = (int)(center.y + (int)ROUND((y-offset.y)/resolution));
-            return is_inside(v.x, v.y);
+            if(is_inside(v.x, v.y))
+                return true;
+            else {
+                warn("(%f, %f) is outside map", x, y);
+                return false;
+            }
         }
 
         /**
@@ -957,28 +961,35 @@ namespace librobotics {
                 throw LibRoboticsRuntimeException("angle resolution must > 0");
             }
             angle_res = _angle_res;
-            int step = int((2*M_PI) / angle_res);
+            angle_step = (int)((2*M_PI) / angle_res + 1);
             int result;
             vec2i hit;
+            int cnt = 0;
+            std::cerr << "Start ray casting at: ";
             ray_casting_cache.resize(mapsize.x);
             for(int x = 0; x < mapsize.x; x++) {
                 ray_casting_cache[x].resize(mapsize.y);
+                if((x % 10) == 0) {
+                    std::cerr << "(" << x << ",y)...";
+                }
                 for(int y = 0; y < mapsize.y; y++) {
                     if(mapprob[x][y] > 0) {
                         //occupied grid
                         continue;
                     }
-                    ray_casting_cache[x][y].resize(step);
-                    for(int i = 0; i < step; i++) {
-                        result =get_ray_casting_hit_point(x, y, i * angle_res, hit);
+                    ray_casting_cache[x][y].resize(angle_step);
+                    for(int i = 0; i < angle_step; i++) {
+                        result = get_ray_casting_hit_point(x, y, i * angle_res, hit);
                         if(result == 1) {
                             ray_casting_cache[x][y][i] = sqrt(double(SQR(x-hit.x) + SQR(y-hit.y))) * resolution;
                         } else {
                             ray_casting_cache[x][y][i] = -1;    //no measurement on that direction
                         }
+                        cnt++;
                     }
                 }
             }
+            std::cerr << "done! with " << cnt << " ray casting operations\n";
         }
 
         /**
@@ -2613,6 +2624,9 @@ namespace librobotics {
 
     }
 
+    /**
+     * Namespace for Localization algorithm
+     */
     namespace localization {
 
         /*-------------------------------------------------------------
@@ -2634,23 +2648,28 @@ namespace librobotics {
 
         }
 
-        /*-------------------------------------------------------------
-         *
-         * Definition of the LibRobotics: Monte Carlo Localization MCL in 2D space
-         * (for grid map)
-         *
-         -------------------------------------------------------------*/
+        /**
+         * Namespace for Monte Carlo Localization MCL in 2D grid map
+         */
         namespace mcl_grid2 {
+            /**
+             * Configuration for MCL on grid2 map
+             */
             template<typename T>
             struct configuration {
-                std::string mapfile;
-                pose2<T> map_offset;
-                vec2<T> map_center;
-                T map_res;
-                T map_angle_res;
+                std::string mapfile;    //!< map file name
+                pose2<T> map_offset;    //!< map offset
+                vec2<T> map_center;     //!< map center
+                T map_res;              //!< map resolution
+                T map_angle_res;        //!< pre-compute ray casting angle resolution
 
-                int n_particles;
-                T odo_motion_var[4];
+                int n_particles;        //!< number of particles
+                T motion_var[6];        //!< \f$(\sigma_0...\sigma_3)\f$ in odometry mode \n \f$(\sigma_0...\sigma_5)\f$ in velocity mode
+                T z_max_range;          //!< max measurement range
+                T z_hit_var;            //!< measurement hit target variance (normal distribution)
+                T z_short_rate;         //!< measurement too short rate (exponential distribution)
+                T z_weight[4];          //!< normalized weight for all possible measurement outcome
+
 
                 /**
                  * Simple load a configuration from text file
@@ -2674,10 +2693,22 @@ namespace librobotics {
 
                     load_cfg_from_text_file(n_particles, file);
 
-                    load_cfg_from_text_file(odo_motion_var[0], file);
-                    load_cfg_from_text_file(odo_motion_var[1], file);
-                    load_cfg_from_text_file(odo_motion_var[2], file);
-                    load_cfg_from_text_file(odo_motion_var[3], file);
+                    //motion
+                    load_cfg_from_text_file(motion_var[0], file);
+                    load_cfg_from_text_file(motion_var[1], file);
+                    load_cfg_from_text_file(motion_var[2], file);
+                    load_cfg_from_text_file(motion_var[3], file);
+                    load_cfg_from_text_file(motion_var[4], file);
+                    load_cfg_from_text_file(motion_var[5], file);
+
+                    //measurement
+                    load_cfg_from_text_file(z_max_range, file);
+                    load_cfg_from_text_file(z_hit_var, file);
+                    load_cfg_from_text_file(z_short_rate, file);
+                    load_cfg_from_text_file(z_weight[0], file);
+                    load_cfg_from_text_file(z_weight[1], file);
+                    load_cfg_from_text_file(z_weight[2], file);
+                    load_cfg_from_text_file(z_weight[3], file);
                     std::cout << "========================================\n";
 
 
@@ -2685,28 +2716,48 @@ namespace librobotics {
                 }
             };
 
-
+            /**
+             * Particle information for MCL on grid2 map
+             */
             template<typename T>
             struct particle {
-                pose2<T> pose;
-                T w;
+                pose2<T> pose;      //!< robot position
+                T w;                //!< weight
                 particle() : w(0) { }
             };
 
+            /**
+             * Data for MCL on grid2 map
+             */
             template<typename T>
             struct data {
-                std::vector<mcl_grid2::particle<T> > p;
-                std::vector<mcl_grid2::particle<T> > p_tmp;
-                map_grid2<T> map;
-                pose2<T> last_odo_pose;
+                std::vector<mcl_grid2::particle<T> > p;         //!< current particle set
+                std::vector<mcl_grid2::particle<T> > p_tmp;     //!< temporary particle set
+                map_grid2<T> map;                               //!< gird map
+                pose2<T> last_odo_pose;                         //!< last odometry position
 
                 void initialize(mcl_grid2::configuration<T>& cfg) {
                     p.resize(cfg.n_particles);
+                    for(size_t i = 0; i < p.size(); i++ ) {
+                        p[i].w = 1.0/cfg.n_particles;  //all particle have the same important
+                    }
+
                     p_tmp.resize(cfg.n_particles);
                     map.load_image(cfg.mapfile,
                                    cfg.map_offset,
                                    cfg.map_center,
                                    cfg.map_res);
+                }
+
+                void normalize_weight() {
+                    T sum = 0;
+                    for(size_t i = 0; i < p.size(); i++ ) {
+                        sum += p[i].w;
+                    }
+                    sum /= p.size();
+                    for(size_t i = 0; i < p.size(); i++ ) {
+                        p[i].w /= sum;
+                    }
                 }
             };
 
@@ -2716,13 +2767,50 @@ namespace librobotics {
                                     std::vector<vec2<T> > z,
                                     pose2<T> odo_pose)
             {
-                for(int i = 0; i < cfg.n_particles; i++) {
-                    data.p_tmp[i].pose =
+                for(int n = 0; n < cfg.n_particles; n++) {
+                    //predict position
+                    data.p_tmp[n].pose =
                         math_model::odometry_motion_sample(odo_pose,
                                                            data.last_odo_pose,
-                                                           data.p[i].pose,
+                                                           data.p[n].pose,
                                                            cfg.odo_motion_var);
+
+                    //check measurement
+                    vec2i grid_coor;
+                    T sense_angle = 0;
+                    T sense_idx = 0;
+                    T zp;
+                    if(data.map.get_grid_coordinate(data.p_tmp[n].pose.x, data.p_tmp[n].pose.y, grid_coor)) {
+                        data.p_tmp[n].weight = 1.0;
+                        for(size_t i = 0; i < z.size(); z++) {
+                        //find nearest measurement in pre-computed ray casting
+
+                            //compute sense angle (convert from local coordinate to global coordinate)
+                            sense_angle = norm_a_rad(z[i].theta() + data.p_tmp[n].pose.a);
+
+                            //get index
+                            sense_idx = (int)(sense_angle/data.map.angle_res);
+                            if(sense_idx < 0) sense_angle += data.map.angle_step;
+
+                            //compute PDF (can speed up by lookup table)
+                            zp = math_model::beam_range_finder_measurement(z[i].size(),
+                                                                           data.map.ray_casting_cache[grid_coor.x][grid_coor.y][i],
+                                                                           cfg.z_max_range,
+                                                                           cfg.z_hit_var,
+                                                                           cfg.z_short_rate,
+                                                                           cfg.z_weight);
+                            data.p_tmp[n].weight *= zp;
+                        }
+                    } else {
+                        data.p_tmp[n].weight = 0;
+                    }
+
+                    data.p[n] = data.p_tmp[n];
                 }
+
+                //normalize
+                data.normalize();
+
 
 
                 return 0;
