@@ -81,6 +81,7 @@ int main(int argc, char* argv[]) {
     map_image.display(disp_map);
     map_image_z.display(disp_map_z);
 
+
     while(!disp_map.is_closed  && !disp_map.is_keyESC &&
           !disp_map_z.is_closed  && !disp_map_z.is_keyESC)
     {
