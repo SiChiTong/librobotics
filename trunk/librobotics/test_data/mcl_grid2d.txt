@@ -1,4 +1,4 @@
-../test_data/map_4F_5cm_1px.png  	#map file name
+../test_data/map_4F_5cm_1px_upper_lrf.png  	#map file name
 0.0 0.0 0.0							#map offset
 0.0 0.0								#map center
 0.05								#map resolution (1px / 0.1m)
@@ -13,7 +13,7 @@
 4.0				        			#max measurement range
 0.001		            			#measurement hit target variance (normal distribution)
 0.01   				      			#measurement too short rate (exponential distribution)
-0.25			          			#zhit normalized weight for all possible measurement outcome
-0.25								#zshort normalized weight for all possible measurement outcome
-0.25								#zmax normalized weight for all possible measurement outcome
-0.25								#zrand normalized weight for all possible measurement outcome
+1.0				          			#zhit normalized weight for all possible measurement outcome
+1.0									#zshort normalized weight for all possible measurement outcome
+1.0									#zmax normalized weight for all possible measurement outcome
+1.0									#zrand normalized weight for all possible measurement outcome

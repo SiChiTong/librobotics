@@ -965,12 +965,12 @@ namespace librobotics {
             int result;
             vec2i hit;
             int cnt = 0;
-            std::cerr << "Start ray casting at: ";
+            std::cerr << "Start ray casting compute...";
             ray_casting_cache.resize(mapsize.x);
             for(int x = 0; x < mapsize.x; x++) {
                 ray_casting_cache[x].resize(mapsize.y);
                 if((x % 10) == 0) {
-                    std::cerr << "(" << x << ",y)...";
+                    std::cerr << ".";
                 }
                 for(int y = 0; y < mapsize.y; y++) {
                     if(mapprob[x][y] > 0) {
@@ -1171,7 +1171,7 @@ namespace librobotics {
 
     /*-------------------------------------------------------
      *
-     * Definition of the LibRobotics: Log files reader (CARMEN format)
+     * Definition of the LibRobotics: Log files reader (CARMEN and other simple formats)
      * (http://carmen.sourceforge.net)
      *
      -------------------------------------------------------*/
@@ -1245,7 +1245,14 @@ namespace librobotics {
         }
 
         int read_all() {
-            while(read_one_step()) { }
+            std::cerr << "Read all log data...";
+            int cnt = 0;
+            while(read_one_step()) {
+                cnt++;
+                if(cnt % 10 == 0)
+                    std::cerr << ".";
+            }
+            std::cerr << "done with " << step << "steps read\n";
             return step;
         }
 
@@ -1555,6 +1562,18 @@ namespace librobotics {
         return 1.224744871 * ((stat_crand()*v) +  (stat_crand()*v));
     }
 
+    /**
+     * Sample a random value from uniform distribution in a circle.
+     * (http://www.comnets.uni-bremen.de/itg/itgfg521/per_eval/p001.html)
+     * @param a angle result \f$[-\pi, \pi]\f$
+     * @param r radius result \f$[-1, 1]\f$
+     */
+    inline void stat_sample_circle_uniform_dist(double& a, double& r) {
+        stat_srand();
+        a = stat_crand() * M_PI;
+        r = sqrt(stat_crand());
+    }
+
 
     /*--------------------------------------------------------------------------------
      *
@@ -1647,6 +1666,7 @@ namespace librobotics {
                                        const std::vector<T2>& cosTable,
                                        const std::vector<T2>& sinTable,
                                        std::vector<vec2<T3> >& scan_point,
+                                       T3 scale = 1.0,
                                        int step = 1,
                                        bool flip = false)
     {
@@ -1659,13 +1679,14 @@ namespace librobotics {
             scan_point.resize(nPts);
         }
 
-        vec2<T3> tmp;
+        T3 r = 0;;
         int idx = 0;
         int j = 0;
         for(size_t i = 0; i < nPts; i+=step ) {
             idx = (!flip) ? i : ((nPts - 1) - i);
-            scan_point[j].x = ranges[i] * cosTable[idx];
-            scan_point[j].y = ranges[i] * sinTable[idx];
+            r = ranges[i] * scale;
+            scan_point[j].x = r * cosTable[idx];
+            scan_point[j].y = r * sinTable[idx];
             j++;
         }
     }
@@ -1977,17 +1998,8 @@ namespace librobotics {
         /**
          * Measurement model for range sensor from CH6 of Probabilistic Robotics book.
          * http://robots.stanford.edu/probabilistic-robotics/ \n
-         * \f[
-         *   p_{hit}(z_t^k | x_t, m) =
-         *     \left\{
-         *       \begin{array}{ll}
-         *         \eta \mathcal{N}(z_t^k;z_t^{k*},\sigma_{hit}^2) & \textbf{if } 0 \le z_t^k \le z_{max}\\
-         *         0 & \textbf{otherwise}
-         *       \end{array}
-         *     \right.
-         * \f]
          * @param x measurement data
-         * @param x_mean expected measurement range
+         * @param x_hit expected measurement range
          * @param x_max maximum possible measurement range
          * @param var_hit variance of the measurement
          * @param rate_short rate of exponential distribution
@@ -1996,17 +2008,17 @@ namespace librobotics {
          */
         template<typename T>
         T beam_range_finder_measurement(T x,
-                                        T x_mean,
+                                        T x_hit,
                                         T x_max,
                                         T var_hit,
                                         T rate_short,
                                         T z[4])
         {
-            T p_hit =   ((x >= 0) && (x <= x_max)) ? stat_pdf_normal_dist(var_hit, x_mean, x) : 0.0;
-            T p_short = ((x >= 0) && (x <= x_mean)) ? stat_pdf_exponential_dist(rate_short, x) : 0.0;
-            p_short *= 1.0 / (1.0 - exp(-rate_short * x_mean));
-            T p_max =   (x == x_max ? 1.0 : 0.0);
-            T p_rand =  ((x >= 0) && (x < x_max)) ? 1.0/x_max : 0.0;
+            T p_hit =   ((x > 0) && (x <= x_max)) ? stat_pdf_normal_dist(var_hit, x_hit, x) : 0.0;
+            T p_short = ((x > 0) && (x <= x_hit)) ? stat_pdf_exponential_dist(rate_short, x) : 0.0;
+            p_short *= 1.0 / (1.0 - exp(-rate_short * x_hit));
+            T p_max =   (x <= 0 || x >= x_max ? 1.0 : 0.0);
+            T p_rand =  ((x > 0) && (x < x_max)) ? 1.0/x_max : 0.0;
             return (z[0] * p_hit) + (z[1] * p_short) + (z[2] * p_max)  + (z[3] * p_rand);
         }
 
@@ -2665,6 +2677,7 @@ namespace librobotics {
 
                 int n_particles;        //!< number of particles
                 T motion_var[6];        //!< \f$(\sigma_0...\sigma_3)\f$ in odometry mode \n \f$(\sigma_0...\sigma_5)\f$ in velocity mode
+                T map_var;              //!< compute directly from map resolution
                 T z_max_range;          //!< max measurement range
                 T z_hit_var;            //!< measurement hit target variance (normal distribution)
                 T z_short_rate;         //!< measurement too short rate (exponential distribution)
@@ -2709,6 +2722,13 @@ namespace librobotics {
                     load_cfg_from_text_file(z_weight[1], file);
                     load_cfg_from_text_file(z_weight[2], file);
                     load_cfg_from_text_file(z_weight[3], file);
+
+                    //compute variance
+                    map_var = SQR(map_res);
+                    z_hit_var = sqrt(map_var + z_hit_var);
+                    std::cout << "z_hit_var with map_var: " << map_var << "\n";
+
+
                     std::cout << "========================================\n";
 
 
@@ -2738,15 +2758,28 @@ namespace librobotics {
 
                 void initialize(mcl_grid2::configuration<T>& cfg) {
                     p.resize(cfg.n_particles);
-                    for(size_t i = 0; i < p.size(); i++ ) {
-                        p[i].w = 1.0/cfg.n_particles;  //all particle have the same important
-                    }
-
                     p_tmp.resize(cfg.n_particles);
                     map.load_image(cfg.mapfile,
                                    cfg.map_offset,
                                    cfg.map_center,
                                    cfg.map_res);
+                }
+
+                void initialize_particle(int mode, pose2<T> start, T radius) {
+                    switch(mode) {
+                        case 0: //all at start point
+                            break;
+                        case 1: //all at start point with uniform random angle
+                            break;
+                        case 2: //all uniform random (x,y) in circle at start point
+                            break;
+                        case 3: //case 2 with uniform random angle
+                            break;
+                        case 4: //all uniform random (x,y) over map
+                            break;
+                        case 5: //all uniform random (x,y) over map with uniform random angle
+                            break;
+                    }
                 }
 
                 void normalize_weight() {
@@ -2760,6 +2793,7 @@ namespace librobotics {
                     }
                 }
             };
+
 
             template<typename T>
             int update_with_odomety(mcl_grid2::configuration<T>& cfg,

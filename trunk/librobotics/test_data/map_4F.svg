@@ -15,7 +15,10 @@
    inkscape:version="0.46"
    version="1.0"
    sodipodi:docname="map_4F.svg"
-   inkscape:output_extension="org.inkscape.output.svg.inkscape">
+   inkscape:output_extension="org.inkscape.output.svg.inkscape"
+   inkscape:export-filename="/home/mahisorn/workspace/librobotics/test_data/map_4F_5cm_1px.png"
+   inkscape:export-xdpi="15.24"
+   inkscape:export-ydpi="15.24">
   <defs
      id="defs4">
     <inkscape:perspective
