@@ -285,7 +285,7 @@ T inline square_sum(const std::vector<T>& v) {
 #define PRINTVAR(x)         (std::cout << #x << ":" << (x) << "\n")
 #define PRINTVALUE(x)       (std::cout << (x) << "\n")
 #define PRINTVEC(x) \
-    for(uint idx = 0; idx < x.size(); idx++) { \
+    for(size_t idx = 0; idx < x.size(); idx++) { \
         std::cout << idx << "," << x[idx] << "\n"; \
     }
 
