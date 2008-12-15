@@ -250,6 +250,31 @@ T inline min_angle_diff(T a, T b) {
     }
     return d_angle;
 }
+
+/**
+ * Compute a cumulative summation
+ * @param v
+ * @param sum
+ */
+template<typename T>
+void inline cum_sum(const std::vector<T>& v, std::vector<T>& sum) {
+    if(v.size() == 0) return;
+    if(sum.size() != v.size()) sum.resize(v.size());
+    sum[0] = v[0];
+    for(size_t i = 1; i < v.size(); i++) {
+        sum[i] = sum[i-1] + v[i];
+    }
+}
+
+template<typename T>
+T inline square_sum(const std::vector<T>& v) {
+    T sum = 0;
+    for(size_t i = 0; i < v.size(); i++) {
+        sum += SQR(v[i]);
+    }
+    return sum;
+}
+
 /* @} */
 
 
@@ -1571,7 +1596,17 @@ namespace librobotics {
     inline void stat_sample_circle_uniform_dist(double& a, double& r) {
         stat_srand();
         a = stat_crand() * M_PI;
-        r = sqrt(stat_crand());
+        r = sqrt(stat_rand());
+    }
+
+    template<typename T>
+    void stat_stratified_random(std::vector<T>& v, int n) {
+        double k = 1.0/n;
+        double k_2 = k * 0.5;
+        if((int)v.size() != n) v.resize(n);
+        for(int i = 0; i < n; i++) {
+            v[i] = (k_2 + (k*i)) + (stat_rand() * k) - k_2;
+        }
     }
 
 
@@ -2742,8 +2777,19 @@ namespace librobotics {
             template<typename T>
             struct particle {
                 pose2<T> pose;      //!< robot position
-                T w;                //!< weight
+                double w;                //!< weight
                 particle() : w(0) { }
+
+                ///Support for output stream operator
+                friend std::ostream& operator << (std::ostream& os, const particle<T>& p) {
+                    return os << p.pose << " " << p.w;
+                }
+
+                ///Support for input stream operator
+                friend std::istream& operator >> (std::istream& is, particle<T>& p) {
+                    is >> p.pose >> p.w;
+                    return is;
+                }
             };
 
             /**
@@ -2765,21 +2811,64 @@ namespace librobotics {
                                    cfg.map_res);
                 }
 
-                void initialize_particle(int mode, pose2<T> start, T radius) {
+                void initialize_particle(int mode, pose2<T> start, T param0, T param1) {
+                    size_t i = 0;
                     switch(mode) {
                         case 0: //all at start point
+                            for(i = 0; i < p.size(); i++)
+                                p[i].pose = start;
                             break;
                         case 1: //all at start point with uniform random angle
+                            for(i = 0; i < p.size(); i++) {
+                                p[i].pose.x = start.x;
+                                p[i].pose.y = start.y;
+                                p[i].pose.a = stat_crand() * M_PI;
+                            }
                             break;
                         case 2: //all uniform random (x,y) in circle at start point
+                        {
+                            double r, a;
+                            for(i = 0; i < p.size(); i++) {
+                                stat_sample_circle_uniform_dist(a, r);
+                                p[i].pose.x = start.x + (r * param0 * cos(a));
+                                p[i].pose.y = start.y + (r * param0 * sin(a));
+                                p[i].pose.a = start.a;
+                            }
                             break;
+                        }
                         case 3: //case 2 with uniform random angle
+                        {
+                            double r, a;
+                            for(i = 0; i < p.size(); i++) {
+                                stat_sample_circle_uniform_dist(a, r);
+                                p[i].pose.x = start.x + (r * param0 * cos(a));
+                                p[i].pose.y = start.y + (r * param0 * sin(a));
+                                p[i].pose.a = stat_crand() * M_PI;
+                            }
                             break;
-                        case 4: //all uniform random (x,y) over map
+                        }
+                        case 4: //case 2 with normal distribution random angle
+                        {
+                            double r, a;
+                            for(i = 0; i < p.size(); i++) {
+                                stat_sample_circle_uniform_dist(a, r);
+                                p[i].pose.x = start.x + (r * param0 * cos(a));
+                                p[i].pose.y = start.y + (r * param0 * sin(a));
+                                p[i].pose.a = start.a + stat_sample_normal_dist(param1);
+                            }
                             break;
+                        }
                         case 5: //all uniform random (x,y) over map with uniform random angle
+                            throw LibRoboticsWarningException("case 4,5 are not yet implement in %s", __FUNCTION__);
                             break;
+                    }//switch
+
+                    //initialize weight
+                    for(i = 0; i < p.size(); i++) {
+                        PRINTVAR(p[i]);
+                        p[i].w = 1.0/p.size();
                     }
+
                 }
 
                 void normalize_weight() {
@@ -2787,9 +2876,53 @@ namespace librobotics {
                     for(size_t i = 0; i < p.size(); i++ ) {
                         sum += p[i].w;
                     }
-                    sum /= p.size();
                     for(size_t i = 0; i < p.size(); i++ ) {
                         p[i].w /= sum;
+                    }
+                }
+
+                void stratified_resample(int n_min) {
+                    normalize_weight();
+                    size_t n = p.size();
+
+                    std::vector<double> cum_sum_w(n, 0.0);
+                    std::vector<int> keep(n, 0);
+                    std::vector<double> select(n, 0.0);
+                    double square_sum = 0;
+
+                    //square sum
+                    for(size_t i = 0; i < n; i++) {
+                        square_sum += SQR(p[i].w);
+                    }
+
+                    //cumulative sum
+                    cum_sum_w[0] = p[0].w;
+                    for(size_t i = 1; i < n; i++) {
+                        cum_sum_w[i] = cum_sum_w[i-1] + p[i].w;
+                    }
+
+                    int n_eff = (int)(1.0/square_sum);
+
+                    PRINTVAR(n_eff);
+
+                    if(n_eff < n_min) {
+                        stat_stratified_random(select, n);
+                        size_t ctr = 0;
+                        for(size_t i = 0; i < n; i++) {
+                            while((ctr < n) && (select[ctr] < cum_sum_w[i])) {
+                                keep[ctr] = i;
+                                ctr++;
+                            }
+                        }
+
+                        for(size_t i = 0; i < n; i++) {
+                            p_tmp[i].pose = p[keep[i]].pose;
+                        }
+
+                        for(size_t i = 0; i < n; i++) {
+                            p[i].pose = p_tmp[i].pose;
+                            p[i].w = 1.0/n;
+                        }
                     }
                 }
             };
@@ -2807,16 +2940,17 @@ namespace librobotics {
                         math_model::odometry_motion_sample(odo_pose,
                                                            data.last_odo_pose,
                                                            data.p[n].pose,
-                                                           cfg.odo_motion_var);
+                                                           cfg.motion_var);
 
                     //check measurement
                     vec2i grid_coor;
                     T sense_angle = 0;
-                    T sense_idx = 0;
+                    int sense_idx = 0;
                     T zp;
+
                     if(data.map.get_grid_coordinate(data.p_tmp[n].pose.x, data.p_tmp[n].pose.y, grid_coor)) {
-                        data.p_tmp[n].weight = 1.0;
-                        for(size_t i = 0; i < z.size(); z++) {
+                        data.p_tmp[n].w = 1.0;
+                        for(size_t i = 0; i < z.size(); i++) {
                         //find nearest measurement in pre-computed ray casting
 
                             //compute sense angle (convert from local coordinate to global coordinate)
@@ -2824,29 +2958,26 @@ namespace librobotics {
 
                             //get index
                             sense_idx = (int)(sense_angle/data.map.angle_res);
-                            if(sense_idx < 0) sense_angle += data.map.angle_step;
+                            if(sense_idx < 0) sense_idx += data.map.angle_step;
 
                             //compute PDF (can speed up by lookup table)
                             zp = math_model::beam_range_finder_measurement(z[i].size(),
-                                                                           data.map.ray_casting_cache[grid_coor.x][grid_coor.y][i],
+                                                                           data.map.ray_casting_cache[grid_coor.x][grid_coor.y][sense_idx],
                                                                            cfg.z_max_range,
                                                                            cfg.z_hit_var,
                                                                            cfg.z_short_rate,
                                                                            cfg.z_weight);
-                            data.p_tmp[n].weight *= zp;
+                            data.p_tmp[n].w *= zp;
                         }
-                    } else {
-                        data.p_tmp[n].weight = 0;
-                    }
 
-                    data.p[n] = data.p_tmp[n];
+                    } else {
+                        data.p_tmp[n].w = 0;
+                    }
+                    data.p[n].pose = data.p_tmp[n].pose;
+                    data.p[n].w = data.p_tmp[n].w;
                 }
 
-                //normalize
-                data.normalize();
-
-
-
+                data.last_odo_pose = odo_pose;
                 return 0;
             }
         }

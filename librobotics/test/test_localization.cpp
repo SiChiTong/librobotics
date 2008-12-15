@@ -16,7 +16,7 @@ using namespace std;
 using namespace librobotics;
 using namespace cimg_library;
 
-#define ZOOM_FACTOR 3
+#define ZOOM_FACTOR 4
 
 const unsigned char
     red[] = { 255,0,0 }, green[] = { 0,255,0 }, blue[] = { 0,0,255 },
@@ -31,6 +31,7 @@ vec2i disp_map_mouse;
 vec2d disp_map_mouse_pose;
 vec2i disp_map_z_mouse;
 vec2d disp_map_z_mouse_pose;
+bool update_map_z_display = false;
 
 #define MEDIAN_WND      3
 #define SEG_THRES       100
@@ -78,24 +79,52 @@ void draw_robot(CImg<unsigned char>& img, const pose2d& pose, double size, doubl
     img.draw_arrow(grid_pose.x, grid_pose.y, grid_vec.x, grid_vec.y, black);
 }
 
+template<typename T>
+void draw_particle(CImg<unsigned char>& img,
+                   const vector<localization::mcl_grid2::particle<T> >& particles,
+                   double size, double zoom)
+{
+    vec2i grid_pose, grid_vec;
+    for(size_t i = 0; i < particles.size(); i++) {
+        mcl_data.map.get_grid_coordinate(particles[i].pose.x, particles[i].pose.y, grid_pose);
+        grid_pose *= zoom;
+        grid_pose.y = img.dimy() - grid_pose.y;
+
+        unsigned char color[3] = {0, 0, 0};
+        color[0] = (unsigned char)(particles[i].w * 255.0);
+        color[1] = (unsigned char)((1.0 - particles[i].w) * 255.0);
+
+
+        img.draw_circle(grid_pose.x, grid_pose.y, (size/mcl_data.map.resolution)*zoom, color);
+
+//        vec2d v = vec2d(size*2.0,0.0).rot(particles[i].pose.a) + particles[i].pose.vec();
+//        mcl_data.map.get_grid_coordinate(v.x, v.y, grid_vec);
+//        grid_vec *= zoom;
+//        grid_vec.y = img.dimy() - grid_vec.y;
+//        img.draw_arrow(grid_pose.x, grid_pose.y, grid_vec.x, grid_vec.y, black);
+    }
+
+}
+
 int main(int argc, char* argv[]) {
     log_data.open("../test_data/log_1224773645.log", "Odometry", "Laser");
     log_data.read_all();
     lrf_init_fi_table(DEG2RAD(-135), DEG2RAD(0.3515625), fi);
     lrf_init_cos_sin_table(DEG2RAD(-135), DEG2RAD(0.3515625), co, si);
+    //threshold and filter
     for(int i = 0; i < log_data.step; i++) {
         lrf_range_median_filter(log_data.lrf[i]);
         lrf_range_threshold(log_data.lrf[i], 400, 0, 4000, 0);
     }
 
-
-    //threshold and filter
-
-
+    vector<double> v;
+    stat_stratified_random(v, 100);
+    PRINTVEC(v);
 
     mcl_cfg.load("../test_data/mcl_grid2d.txt");
     mcl_data.initialize(mcl_cfg);
     mcl_data.map.compute_ray_casting_cache(mcl_cfg.map_angle_res);
+    mcl_data.initialize_particle(2, pose2d(2.6, 5.963, 0.0), 0.5, 0.1);
 
 
     CImg<unsigned char> map_image = mcl_data.map.get_image();
@@ -175,7 +204,9 @@ int main(int argc, char* argv[]) {
 //            PRINTVAR(disp_map_z_mouse);
             disp_map_z_mouse_pose = ((disp_map_z_mouse * (1.0/ZOOM_FACTOR)) - mcl_data.map.center) * mcl_data.map.resolution;
 //            PRINTVAR(disp_map_z_mouse_pose);
-            disp_map_z.set_title("Map-Zoom: %6.3f %6.3f", disp_map_z_mouse_pose.x, disp_map_z_mouse_pose.y);
+            disp_map_z.set_title("Map-Zoom: %6.3f %6.3f %d %d",
+                                  disp_map_z_mouse_pose.x, disp_map_z_mouse_pose.y,
+                                  disp_map_z_mouse.x, disp_map_z_mouse.y);
 
 
             if(disp_map_z.is_keyR) {
@@ -216,7 +247,7 @@ int main(int argc, char* argv[]) {
                         set_pose_state = SET_POSE_STATE_DRAG;
                         cout << "Set position at: " << set_pose_pose << "\n";
                         draw_robot(map_image_tmp, set_pose_pose, 0.25, ZOOM_FACTOR);
-                        map_image_tmp.display(disp_map_z);
+                        update_map_z_display = true;
                     }
                     break;
                 case 2: //right btn
@@ -234,7 +265,7 @@ int main(int argc, char* argv[]) {
                         double p;
                         double p1;
                         if(mcl_data.map.ray_casting_cache[grid.x][grid.y].size() != 0) {
-                            for(int i = 0; i < mcl_data.map.angle_step; i+=10) {
+                            for(int i = 0; i < mcl_data.map.angle_step; i++) {
                                 r = mcl_data.map.ray_casting_cache[grid.x][grid.y][i];
                                 if(r > mcl_cfg.z_max_range) continue;
 
@@ -268,14 +299,83 @@ int main(int argc, char* argv[]) {
                             }
                             map_image_tmp.draw_circle(disp_map_z.mouse_x, disp_map_z.mouse_y, (int)(mcl_cfg.z_max_range/mcl_cfg.map_res)*ZOOM_FACTOR, green, 1.0, 5);
                             map_image_tmp.draw_circle(disp_map_z.mouse_x, disp_map_z.mouse_y, (int)(0.25/mcl_cfg.map_res)*ZOOM_FACTOR, green, 1.0, 5);
-                            map_image_tmp.display(disp_map_z);
-
+                            update_map_z_display = true;
                             PRINTVAR(q);
                             PRINTVAR(q1);
                         }
                     }
                     break;
                 case 4: //mid btn
+                    {
+                        int img_x, img_y;
+                        double r;
+                        double r_grid;
+                        double rad;
+                        vec2i grid;
+                        int angle_idx = 0;
+                        if(!mcl_data.map.get_grid_coordinate(disp_map_z_mouse_pose.x, disp_map_z_mouse_pose.y, grid))
+                            break;
+                        if(mcl_data.map.ray_casting_cache[grid.x][grid.y].size() != 0) {
+                            measurement_z.clear();
+                            lrf_scan_point_from_scan_range(log_data.lrf[log_step], co, si, lrf_pts, 0.001);
+                            PRINTVAR(lrf_pts.size());
+                            for(size_t i = 0; i < lrf_pts.size(); i+=10) {
+                                if(lrf_pts[i].size() > 0.1) {
+                                    measurement_z.push_back(lrf_pts[i]);
+                                }
+                            }
+//                            PRINTVAR(measurement_z.size());
+//                            PRINTVAR(log_data.odo[log_step]);
+
+                            double p = 1.0;
+                            double zp = 1.0;
+                            for(size_t i = 0; i < measurement_z.size(); i++) {
+                                r = measurement_z[i].size() / mcl_data.map.resolution;
+                                rad = measurement_z[i].theta();
+                                angle_idx = (int)(rad/mcl_data.map.angle_res);
+                                if(angle_idx < 0) angle_idx += mcl_data.map.angle_step;
+
+                                img_x = r * cos(rad) * ZOOM_FACTOR;
+                                img_y = r * sin(rad) * ZOOM_FACTOR;
+                                map_image_tmp.draw_line(disp_map_z.mouse_x,
+                                                        disp_map_z.mouse_y,
+                                                        disp_map_z_mouse.x + img_x,
+                                                        map_image_z.dimy() - (disp_map_z_mouse.y + img_y), red);
+
+                                r_grid = mcl_data.map.ray_casting_cache[grid.x][grid.y][angle_idx] / mcl_data.map.resolution;
+                                img_x = r_grid * cos(angle_idx * mcl_data.map.angle_res) * ZOOM_FACTOR;
+                                img_y = r_grid * sin(angle_idx * mcl_data.map.angle_res) * ZOOM_FACTOR;
+
+//                                measurement_z[i] += vec2d(0.22, 0.0);
+//                                r = measurement_z[i].size() / mcl_data.map.resolution;
+//                                rad = measurement_z[i].theta();
+//                                img_x = r * cos(rad) * ZOOM_FACTOR;
+//                                img_y = r * sin(rad) * ZOOM_FACTOR;
+                                map_image_tmp.draw_line(disp_map_z.mouse_x,
+                                                        disp_map_z.mouse_y,
+                                                        disp_map_z_mouse.x + img_x,
+                                                        map_image_z.dimy() - (disp_map_z_mouse.y + img_y), green);
+
+
+                                zp = math_model::beam_range_finder_measurement(measurement_z[i].size(),
+                                                                               mcl_data.map.ray_casting_cache[grid.x][grid.y][angle_idx],
+                                                                               mcl_cfg.z_max_range,
+                                                                               mcl_cfg.z_hit_var,
+                                                                               mcl_cfg.z_short_rate,
+                                                                               mcl_cfg.z_weight);
+                                p *= zp;
+                            }
+
+                            PRINTVAR(p);
+
+
+
+
+                            update_map_z_display = true;
+                        }
+
+
+                    }
                     break;
                 case 3: //left-right btn
                     if(set_pose_state == SET_POSE_STATE_DRAG) {
@@ -284,7 +384,7 @@ int main(int argc, char* argv[]) {
                         set_pose_state = SET_POSE_STATE_DRAG;
                         cout << "With angle : " << set_pose_pose << "\n";
                         draw_robot(map_image_tmp, set_pose_pose, 0.25, ZOOM_FACTOR);
-                        map_image_tmp.display(disp_map_z);
+                        update_map_z_display = true;
                     }
                     break;
                 case 5: //left-mid btn
@@ -301,23 +401,82 @@ int main(int argc, char* argv[]) {
                 single_step = false;
             }
 
+            cout << "====== Step: " << log_step << "======\n";
+
 
             //get sensor data
+            cout << "====== get sensor data ======\n";
             measurement_z.clear();
             lrf_scan_point_from_scan_range(log_data.lrf[log_step], co, si, lrf_pts, 0.001);
-            for(size_t i = 0; i < lrf_pts.size(); i+=10) {
-                if(lrf_pts[i].size() > 0.1)
+            for(size_t i = 0; i < lrf_pts.size(); i+=20) {
+                if(lrf_pts[i].size() > 0.1) {
                     measurement_z.push_back(lrf_pts[i]);
+                }
             }
             PRINTVAR(measurement_z.size());
-
-
-
+            PRINTVAR(log_data.odo[log_step]);
 
 
             //update
+            cout << "====== update ======\n";
+            localization::mcl_grid2::update_with_odomety(mcl_cfg,
+                                                         mcl_data,
+                                                         measurement_z,
+                                                         log_data.odo[log_step]);
+
+
+            //find best particle
+            double max_w = -1e100;
+            int max_idx = 0;
+            for(size_t i = 0; i < mcl_data.p.size(); i++) {
+                if(mcl_data.p[i].w > max_w) {
+                    max_w = mcl_data.p[i].w;
+                    max_idx = i;
+                }
+            }
+
+            draw_robot(map_image_tmp, mcl_data.p[max_idx].pose, 0.25, ZOOM_FACTOR);
+            //draw lrf
+            int img_x, img_y;
+            double r;
+            double rad;
+            vec2i grid;
+            if(mcl_data.map.get_grid_coordinate(mcl_data.p[max_idx].pose.x,
+                                                mcl_data.p[max_idx].pose.y, grid))
+            {
+                PRINTVAR(mcl_data.p[max_idx]);
+                grid *= ZOOM_FACTOR;
+                for(size_t i = 0; i < measurement_z.size(); i++) {
+                    r = measurement_z[i].size() / mcl_data.map.resolution;
+                    rad = norm_a_rad(measurement_z[i].theta() + mcl_data.p[max_idx].pose.a);
+                    img_x = r * cos(rad) * ZOOM_FACTOR;
+                    img_y = r * sin(rad) * ZOOM_FACTOR;
+                    map_image_tmp.draw_line(grid.x,
+                                            map_image_z.dimy() - grid.y,
+                                            grid.x + img_x,
+                                            map_image_z.dimy() - (grid.y + img_y), green);
+
+                }
+            }
+
+
+            //draw particle
+            draw_particle(map_image_tmp, mcl_data.p, 0.05, ZOOM_FACTOR);
+            update_map_z_display = true;
+
 
             //resample
+            cout << "====== resample ======\n";
+            if(log_step > 10)
+            mcl_data.stratified_resample((int)(0.75 *  mcl_cfg.n_particles));
+
+
+
+
+
+
+            cout << "====== end ======\n";
+
 
 
 
@@ -334,15 +493,21 @@ int main(int argc, char* argv[]) {
         //update sensor display
         if(log_step != last_log_step) {
             CImg<unsigned char> img(400, 400, 1, 3, 0);
-            lrf_scan_point_from_scan_range(log_data.lrf[last_log_step], co, si, lrf_pts);
-            lrf_draw_scan_point_to_cimg(lrf_pts, img, red, true, 0.05);
-            lrf_draw_scan_point_to_cimg(measurement_z, img, green, false, 50);
+            lrf_scan_point_from_scan_range(log_data.lrf[last_log_step], co, si, lrf_pts, 0.001);
+            lrf_draw_scan_point_to_cimg(lrf_pts, img, red, true, 40);
+            lrf_draw_scan_point_to_cimg(measurement_z, img, green, false, 40);
             disp_sensor.set_title("Odo: %6.3f %6.3f %6.3f",
                     log_data.odo[log_step].x,
                     log_data.odo[log_step].y,
                     log_data.odo[log_step].a);
             img.display(disp_sensor);
             last_log_step = log_step;
+        }
+
+        //update map display
+        if(update_map_z_display) {
+            map_image_tmp.display(disp_map_z);
+            update_map_z_display = false;
         }
 
 
