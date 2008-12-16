@@ -16,7 +16,7 @@ using namespace std;
 using namespace librobotics;
 using namespace cimg_library;
 
-#define ZOOM_FACTOR 4
+#define ZOOM_FACTOR 2
 
 const unsigned char
     red[] = { 255,0,0 }, green[] = { 0,255,0 }, blue[] = { 0,0,255 },
@@ -70,7 +70,7 @@ void draw_robot(CImg<unsigned char>& img, const pose2d& pose, double size, doubl
     mcl_data.map.get_grid_coordinate(pose.x, pose.y, grid_pose);
     grid_pose *= zoom;
     grid_pose.y = img.dimy() - grid_pose.y;
-    img.draw_circle(grid_pose.x, grid_pose.y, (size/mcl_data.map.resolution)*zoom, red);
+    img.draw_circle(grid_pose.x, grid_pose.y, (size/mcl_data.map.resolution)*zoom, red, 0.1);
 
     vec2d v = vec2d(size*1.2,0.0).rot(pose.a) + pose.vec();
     mcl_data.map.get_grid_coordinate(v.x, v.y, grid_vec);
@@ -92,7 +92,7 @@ void draw_particle(CImg<unsigned char>& img,
 
         unsigned char color[3] = {0, 0, 0};
         color[0] = (unsigned char)(particles[i].w * 255.0);
-        color[1] = (unsigned char)((1.0 - particles[i].w) * 255.0);
+        //color[1] = (unsigned char)((1.0 - particles[i].w) * 255.0);
 
 
         img.draw_circle(grid_pose.x, grid_pose.y, (size/mcl_data.map.resolution)*zoom, color);
@@ -107,7 +107,9 @@ void draw_particle(CImg<unsigned char>& img,
 }
 
 int main(int argc, char* argv[]) {
-    log_data.open("../test_data/log_1224773645.log", "Odometry", "Laser");
+    ofstream log;
+    log.open("log.dat");
+    log_data.open("../test_data/log_1224598716.log", "Odometry", "Laser");
     log_data.read_all();
     lrf_init_fi_table(DEG2RAD(-135), DEG2RAD(0.3515625), fi);
     lrf_init_cos_sin_table(DEG2RAD(-135), DEG2RAD(0.3515625), co, si);
@@ -117,14 +119,11 @@ int main(int argc, char* argv[]) {
         lrf_range_threshold(log_data.lrf[i], 400, 0, 4000, 0);
     }
 
-    vector<double> v;
-    stat_stratified_random(v, 100);
-    PRINTVEC(v);
 
     mcl_cfg.load("../test_data/mcl_grid2d.txt");
     mcl_data.initialize(mcl_cfg);
     mcl_data.map.compute_ray_casting_cache(mcl_cfg.map_angle_res);
-    mcl_data.initialize_particle(2, pose2d(2.6, 5.963, 0.0), 0.5, 0.1);
+    mcl_data.initialize_particle(4, pose2d(2.43, 3.3, 0.0), 0.25, 0.1);
 
 
     CImg<unsigned char> map_image = mcl_data.map.get_image();
@@ -410,6 +409,7 @@ int main(int argc, char* argv[]) {
             lrf_scan_point_from_scan_range(log_data.lrf[log_step], co, si, lrf_pts, 0.001);
             for(size_t i = 0; i < lrf_pts.size(); i+=20) {
                 if(lrf_pts[i].size() > 0.1) {
+                    //measurement_z.push_back(lrf_pts[i] + vec2d(0.22, 0.0));
                     measurement_z.push_back(lrf_pts[i]);
                 }
             }
@@ -424,18 +424,42 @@ int main(int argc, char* argv[]) {
                                                          measurement_z,
                                                          log_data.odo[log_step]);
 
+//            PRINTVEC(mcl_data.p);
 
             //find best particle
-            double max_w = -1e100;
-            int max_idx = 0;
-            for(size_t i = 0; i < mcl_data.p.size(); i++) {
-                if(mcl_data.p[i].w > max_w) {
-                    max_w = mcl_data.p[i].w;
-                    max_idx = i;
-                }
+          double max_w = -1e100;
+          int max_idx = 0;
+          for(size_t i = 0; i < mcl_data.p.size(); i++) {
+              if(mcl_data.p[i].w >= max_w) {
+                  max_w = mcl_data.p[i].w;
+                  max_idx = i;
+              }
+          }
+
+          log << log_data.odo[log_step] << " " << mcl_data.p[max_idx].pose << "\n";
+
+
+
+            //resample
+            cout << "====== resample ======\n";
+            if(mcl_data.stratified_resample((int)(0.1 *  mcl_cfg.n_particles))) {
+                cout << "do resample\n";
+            } else {
+                cout << "not resample\n";
             }
 
-            draw_robot(map_image_tmp, mcl_data.p[max_idx].pose, 0.25, ZOOM_FACTOR);
+            //draw particle
+             draw_particle(map_image_tmp, mcl_data.p, 0.03, ZOOM_FACTOR);
+             update_map_z_display = true;
+
+             PRINTVAR(mcl_data.p[max_idx]);
+             draw_robot(map_image_tmp, mcl_data.p[max_idx].pose, 0.25, ZOOM_FACTOR);
+
+
+
+            //draw particle
+         //   draw_particle(map_image_tmp, mcl_data.p, 0.05, ZOOM_FACTOR);
+           // update_map_z_display = true;
             //draw lrf
             int img_x, img_y;
             double r;
@@ -444,7 +468,7 @@ int main(int argc, char* argv[]) {
             if(mcl_data.map.get_grid_coordinate(mcl_data.p[max_idx].pose.x,
                                                 mcl_data.p[max_idx].pose.y, grid))
             {
-                PRINTVAR(mcl_data.p[max_idx]);
+
                 grid *= ZOOM_FACTOR;
                 for(size_t i = 0; i < measurement_z.size(); i++) {
                     r = measurement_z[i].size() / mcl_data.map.resolution;
@@ -458,17 +482,6 @@ int main(int argc, char* argv[]) {
 
                 }
             }
-
-
-            //draw particle
-            draw_particle(map_image_tmp, mcl_data.p, 0.05, ZOOM_FACTOR);
-            update_map_z_display = true;
-
-
-            //resample
-            cout << "====== resample ======\n";
-            if(log_step > 10)
-            mcl_data.stratified_resample((int)(0.75 *  mcl_cfg.n_particles));
 
 
 
@@ -512,7 +525,7 @@ int main(int argc, char* argv[]) {
 
 
     }
-
+    log.close();
 
     return 0;
 }

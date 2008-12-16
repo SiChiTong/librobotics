@@ -1,19 +1,19 @@
-../test_data/map_4F_2.png  			#map file name ../test_data/map_4F_5cm_1px_upper_lrf.png  	#map file name
+../test_data/001.png  			#map file name ../test_data/map_4F_5cm_1px_upper_lrf.png  	#map file name
 0.0 0.0 0.0							#map offset
 0.0 0.0								#map center
-0.05								#map resolution (1px / 0.1m)
+0.028571429							#map resolution (m/px)
 2.0									#ray casting cache angle pre step (degree)
-200									#number of particles
-0.003 								#motion \signma_0 for both motion model
-0.0003	 							#motion \signma_1 for both motion model
-0.0025 								#motion \signma_2 for both motion model
+400									#number of particles
+0.005								#motion \signma_0 for both motion model
+0.005	 							#motion \signma_1 for both motion model
+0.005 								#motion \signma_2 for both motion model
 0.001								#motion \signma_3 for both motion model
 0.0 								#motion \signma_4 for only velocity motion model
 0.0									#motion \signma_5 for only velocity motion model
 4.0				        			#max measurement range
-0.001		            			#measurement hit target variance (normal distribution)
-0.01   			      				#measurement too short rate (exponential distribution)
-1.0				          			#zhit normalized weight for all possible measurement outcome
-1.0									#zshort normalized weight for all possible measurement outcome
-1.0									#zmax normalized weight for all possible measurement outcome
-1.0									#zrand normalized weight for all possible measurement outcome
+0.1		            			#measurement hit target variance (normal distribution)
+1.0   			      				#measurement too short rate (exponential distribution)
+0.25				          			#zhit normalized weight for all possible measurement outcome
+0.25									#zshort normalized weight for all possible measurement outcome
+0.25									#zmax normalized weight for all possible measurement outcome
+0.25									#zrand normalized weight for all possible measurement outcome
