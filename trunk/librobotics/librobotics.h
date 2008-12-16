@@ -282,11 +282,11 @@ T inline square_sum(const std::vector<T>& v) {
 /** \defgroup g_lib_marco Helper macros for the library */
 /* @{ */
 //simple print function
-#define PRINTVAR(x)         (std::cout << #x << ":" << (x) << "\n")
-#define PRINTVALUE(x)       (std::cout << (x) << "\n")
+#define PRINTVAR(x)         (std::cerr << #x << ":" << (x) << "\n")
+#define PRINTVALUE(x)       (std::cerr << (x) << "\n")
 #define PRINTVEC(x) \
     for(size_t idx = 0; idx < x.size(); idx++) { \
-        std::cout << idx << "," << x[idx] << "\n"; \
+        std::cerr << idx << "," << x[idx] << "\n"; \
     }
 
 //open file
@@ -1111,6 +1111,7 @@ namespace librobotics {
                 mapprob[i].resize(mapsize.y);
                 for(int j = 0; j < mapsize.y; j++) {
                     mapprob[i][j] = (255 - img(i, j, 0)) / 255.0;
+                    if(mapprob[i][j] < 0.5) mapprob[i][j] = 0.0;
                 }
             }
 
@@ -2757,13 +2758,6 @@ namespace librobotics {
                     load_cfg_from_text_file(z_weight[1], file);
                     load_cfg_from_text_file(z_weight[2], file);
                     load_cfg_from_text_file(z_weight[3], file);
-
-                    //compute variance
-                    map_var = SQR(map_res);
-                    z_hit_var = sqrt(map_var + z_hit_var);
-                    std::cout << "z_hit_var with map_var: " << map_var << "\n";
-
-
                     std::cout << "========================================\n";
 
 
@@ -2854,7 +2848,7 @@ namespace librobotics {
                                 stat_sample_circle_uniform_dist(a, r);
                                 p[i].pose.x = start.x + (r * param0 * cos(a));
                                 p[i].pose.y = start.y + (r * param0 * sin(a));
-                                p[i].pose.a = start.a + stat_sample_normal_dist(param1);
+                                p[i].pose.a = norm_a_rad(start.a + stat_sample_normal_dist(param1));
                             }
                             break;
                         }
@@ -2881,7 +2875,7 @@ namespace librobotics {
                     }
                 }
 
-                void stratified_resample(int n_min) {
+                bool stratified_resample(int n_min) {
                     normalize_weight();
                     size_t n = p.size();
 
@@ -2923,7 +2917,9 @@ namespace librobotics {
                             p[i].pose = p_tmp[i].pose;
                             p[i].w = 1.0/n;
                         }
+                        return true;
                     }
+                    return false;
                 }
             };
 
@@ -2941,7 +2937,6 @@ namespace librobotics {
                                                            data.last_odo_pose,
                                                            data.p[n].pose,
                                                            cfg.motion_var);
-
                     //check measurement
                     vec2i grid_coor;
                     T sense_angle = 0;
@@ -2949,25 +2944,29 @@ namespace librobotics {
                     T zp;
 
                     if(data.map.get_grid_coordinate(data.p_tmp[n].pose.x, data.p_tmp[n].pose.y, grid_coor)) {
-                        data.p_tmp[n].w = 1.0;
-                        for(size_t i = 0; i < z.size(); i++) {
-                        //find nearest measurement in pre-computed ray casting
+                        if(data.map.ray_casting_cache[grid_coor.x][grid_coor.y].size() != 0) {
+                            data.p_tmp[n].w = 1.0;
+                            for(size_t i = 0; i < z.size(); i++) {
+                            //find nearest measurement in pre-computed ray casting
 
-                            //compute sense angle (convert from local coordinate to global coordinate)
-                            sense_angle = norm_a_rad(z[i].theta() + data.p_tmp[n].pose.a);
+                                //compute sense angle (convert from local coordinate to global coordinate)
+                                sense_angle = norm_a_rad(z[i].theta() + data.p_tmp[n].pose.a);
 
-                            //get index
-                            sense_idx = (int)(sense_angle/data.map.angle_res);
-                            if(sense_idx < 0) sense_idx += data.map.angle_step;
+                                //get index
+                                sense_idx = (int)(sense_angle/data.map.angle_res);
+                                if(sense_idx < 0) sense_idx += data.map.angle_step;
 
-                            //compute PDF (can speed up by lookup table)
-                            zp = math_model::beam_range_finder_measurement(z[i].size(),
-                                                                           data.map.ray_casting_cache[grid_coor.x][grid_coor.y][sense_idx],
-                                                                           cfg.z_max_range,
-                                                                           cfg.z_hit_var,
-                                                                           cfg.z_short_rate,
-                                                                           cfg.z_weight);
-                            data.p_tmp[n].w *= zp;
+                                //compute PDF (can speed up by lookup table)
+                                zp = math_model::beam_range_finder_measurement(z[i].size(),
+                                                                               data.map.ray_casting_cache[grid_coor.x][grid_coor.y][sense_idx],
+                                                                               cfg.z_max_range,
+                                                                               cfg.z_hit_var,
+                                                                               cfg.z_short_rate,
+                                                                               cfg.z_weight);
+                                data.p_tmp[n].w *= zp;
+                            }
+                        } else {
+                            data.p_tmp[n].w = 0;
                         }
 
                     } else {
@@ -2976,7 +2975,6 @@ namespace librobotics {
                     data.p[n].pose = data.p_tmp[n].pose;
                     data.p[n].w = data.p_tmp[n].w;
                 }
-
                 data.last_odo_pose = odo_pose;
                 return 0;
             }
