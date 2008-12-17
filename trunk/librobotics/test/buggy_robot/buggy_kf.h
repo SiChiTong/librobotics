@@ -20,19 +20,19 @@
 //#define COV_V SQR(0.01)
 //#define COV_W SQR(0.01)
 
-#define COV_X SQR(0.01)
-#define COV_Y SQR(0.01)
-#define COV_A SQR(1.0)
-#define COV_V SQR(0.1)
-#define COV_W SQR(0.1)
+#define COV_X LB_SQR(0.01)
+#define COV_Y LB_SQR(0.01)
+#define COV_A LB_SQR(1.0)
+#define COV_V LB_SQR(0.1)
+#define COV_W LB_SQR(0.1)
 
 //#define COV_za SQR(((2.0/180.0)*M_PI))   //compass angle
 //#define COV_zv SQR(1.0)                  //encoder velocity
 //#define COV_zw SQR(((5.0/180.0)*M_PI))   //gyro velocity
 
-#define COV_za SQR(0.01)   //compass angle
-#define COV_zv SQR(0.1)   //encoder velocity
-#define COV_zw SQR(0.1)   //gyro velocity
+#define COV_za LB_SQR(0.01)   //compass angle
+#define COV_zv LB_SQR(0.1)   //encoder velocity
+#define COV_zw LB_SQR(0.1)   //gyro velocity
 
 
 //#define COV_zgx SQR(3.0)                 //GPS X
@@ -40,10 +40,10 @@
 //#define COV_zgv SQR(1.0)                 //GPS V
 //#define COV_zga SQR(1.0)                 //GPS A
 
-#define COV_zgx SQR(3.0)                 //GPS X
-#define COV_zgy SQR(3.0)                 //GPS Y
-#define COV_zgv SQR(1.0)                 //GPS V
-#define COV_zga SQR(0.5)                 //GPS A
+#define COV_zgx LB_SQR(3.0)                 //GPS X
+#define COV_zgy LB_SQR(3.0)                 //GPS Y
+#define COV_zgv LB_SQR(1.0)                 //GPS V
+#define COV_zga LB_SQR(0.5)                 //GPS A
 
 class BuggyKF {
 public:

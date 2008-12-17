@@ -111,8 +111,8 @@ int main(int argc, char* argv[]) {
     log.open("log.dat");
     log_data.open("../test_data/log_1224598716.log", "Odometry", "Laser");
     log_data.read_all();
-    lrf_init_fi_table(DEG2RAD(-135), DEG2RAD(0.3515625), fi);
-    lrf_init_cos_sin_table(DEG2RAD(-135), DEG2RAD(0.3515625), co, si);
+    lrf_init_fi_table(LB_DEG2RAD(-135), LB_DEG2RAD(0.3515625), fi);
+    lrf_init_cos_sin_table(LB_DEG2RAD(-135), LB_DEG2RAD(0.3515625), co, si);
     //threshold and filter
     for(int i = 0; i < log_data.step; i++) {
         lrf_range_median_filter(log_data.lrf[i]);
@@ -407,7 +407,7 @@ int main(int argc, char* argv[]) {
             cout << "====== get sensor data ======\n";
             measurement_z.clear();
             lrf_scan_point_from_scan_range(log_data.lrf[log_step], co, si, lrf_pts, 0.001);
-            for(size_t i = 0; i < lrf_pts.size(); i+=20) {
+            for(size_t i = 0; i < lrf_pts.size(); i+=40) {
                 if(lrf_pts[i].size() > 0.1) {
                     //measurement_z.push_back(lrf_pts[i] + vec2d(0.22, 0.0));
                     measurement_z.push_back(lrf_pts[i]);
@@ -419,22 +419,25 @@ int main(int argc, char* argv[]) {
 
             //update
             cout << "====== update ======\n";
-            localization::mcl_grid2::update_with_odomety(mcl_cfg,
+            localization::mcl_grid2::update_with_odomety_augmented(mcl_cfg,
                                                          mcl_data,
                                                          measurement_z,
-                                                         log_data.odo[log_step]);
+                                                         log_data.odo[log_step],
+                                                         (int)(mcl_cfg.min_particels *  mcl_cfg.n_particles));
 
 //            PRINTVEC(mcl_data.p);
 
             //find best particle
-          double max_w = -1e100;
-          int max_idx = 0;
-          for(size_t i = 0; i < mcl_data.p.size(); i++) {
-              if(mcl_data.p[i].w >= max_w) {
-                  max_w = mcl_data.p[i].w;
-                  max_idx = i;
-              }
-          }
+//          double max_w = -1e100;
+//          int max_idx = 0;
+//          for(size_t i = 0; i < mcl_data.p.size(); i++) {
+//              if(mcl_data.p[i].w >= max_w) {
+//                  max_w = mcl_data.p[i].w;
+//                  max_idx = i;
+//              }
+//          }
+          int max_idx = pf_max_weight_index(mcl_data.p);
+
 
           log << log_data.odo[log_step] << " " << mcl_data.p[max_idx].pose << "\n";
 
@@ -442,14 +445,16 @@ int main(int argc, char* argv[]) {
 
             //resample
             cout << "====== resample ======\n";
-            if(mcl_data.stratified_resample((int)(0.1 *  mcl_cfg.n_particles))) {
-                cout << "do resample\n";
-            } else {
-                cout << "not resample\n";
-            }
+//            if(log_step > 0)
+//                pf_stratified_resample(mcl_data.p, (int)(0.3 *  mcl_cfg.n_particles));
+//            if(mcl_data.stratified_resample((int)(0.3 *  mcl_cfg.n_particles))) {
+//                cout << "do resample\n";
+//            } else {
+//                cout << "not resample\n";
+//            }
 
             //draw particle
-             draw_particle(map_image_tmp, mcl_data.p, 0.03, ZOOM_FACTOR);
+             draw_particle(map_image_tmp, mcl_data.p, 0.02, ZOOM_FACTOR);
              update_map_z_display = true;
 
              PRINTVAR(mcl_data.p[max_idx]);

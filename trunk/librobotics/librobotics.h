@@ -173,30 +173,66 @@
 #include <GL/glut.h>
 #endif
 
-#ifndef M_PI
-#define M_PI           3.14159265358979323846
+// Some useful constants. (copy from GNU math.h)
+#if !(defined __USE_BSD || defined __USE_XOPEN)
+# define M_E        2.7182818284590452354   /* e */
+# define M_LOG2E    1.4426950408889634074   /* log_2 e */
+# define M_LOG10E   0.43429448190325182765  /* log_10 e */
+# define M_LN2      0.69314718055994530942  /* log_e 2 */
+# define M_LN10     2.30258509299404568402  /* log_e 10 */
+# define M_PI       3.14159265358979323846  /* pi */
+# define M_PI_2     1.57079632679489661923  /* pi/2 */
+# define M_PI_4     0.78539816339744830962  /* pi/4 */
+# define M_1_PI     0.31830988618379067154  /* 1/pi */
+# define M_2_PI     0.63661977236758134308  /* 2/pi */
+# define M_2_SQRTPI 1.12837916709551257390  /* 2/sqrt(pi) */
+# define M_SQRT2    1.41421356237309504880  /* sqrt(2) */
+# define M_SQRT1_2  0.70710678118654752440  /* 1/sqrt(2) */
 #endif
+
+/* The above constants are not adequate for computation using `long double's.
+   Therefore we provide as an extension constants with similar names as a
+   GNU extension.  Provide enough digits for the 128-bit IEEE quad.  */
+#ifndef __USE_GNU
+# define M_El       2.7182818284590452353602874713526625L  /* e */
+# define M_LOG2El   1.4426950408889634073599246810018921L  /* log_2 e */
+# define M_LOG10El  0.4342944819032518276511289189166051L  /* log_10 e */
+# define M_LN2l     0.6931471805599453094172321214581766L  /* log_e 2 */
+# define M_LN10l    2.3025850929940456840179914546843642L  /* log_e 10 */
+# define M_PIl      3.1415926535897932384626433832795029L  /* pi */
+# define M_PI_2l    1.5707963267948966192313216916397514L  /* pi/2 */
+# define M_PI_4l    0.7853981633974483096156608458198757L  /* pi/4 */
+# define M_1_PIl    0.3183098861837906715377675267450287L  /* 1/pi */
+# define M_2_PIl    0.6366197723675813430755350534900574L  /* 2/pi */
+# define M_2_SQRTPIl    1.1283791670955125738961589031215452L  /* 2/sqrt(pi) */
+# define M_SQRT2l   1.4142135623730950488016887242096981L  /* sqrt(2) */
+# define M_SQRT1_2l 0.7071067811865475244008443621048490L  /* 1/sqrt(2) */
+#endif
+
+
+
 
 /** \defgroup g_user_marco User-friendly macros */
 /* @{ */
-#define SIGN(A)             ((A) >= 0.0 ? (1.0) : (-1.0))
-#define SIGN_BOOL(A)        ((A) >= 0.0 ? (true) : (false))
-#define ROUND(x)            ((x) < 0 ? ceil((x)-0.5):floor((x)+0.5))
-#define IS_ZERO             (1e-8)
-#define VERY_SMALL          (1e-6)
-#define SQR(x)              ((x)*(x))
-#define SQUARE(x)           ((x)*(x))
-#define DEG2RAD(x)          (((x)/180.0) * M_PI)
-#define RAD2DEG(x)          (((x)/M_PI) * 180.0)
-#define SIZE(x, y)          (sqrt(SQR(x) + SQR(y)))
+#define LB_IS_ZERO              (1e-8)
+#define LB_VERY_SMALL           (1e-6)
+#define LB_SIGN(A)              ((A) >= 0.0 ? (1.0) : (-1.0))
+#define LB_SIGN_BOOL(A)         ((A) >= 0.0 ? (true) : (false))
+#define LB_ROUND(x)             ((x) < 0 ? ceil((x)-0.5):floor((x)+0.5))
+#define LB_SQR(x)               ((x)*(x))
+#define LB_SQUARE(x)            (LB_SQR(x))
+#define LB_DEG2RAD(x)           (((x)/180.0) * M_PI)
+#define LB_RAD2DEG(x)           (((x)/M_PI) * 180.0)
+#define LB_SIZE(x,y)            (sqrt(LB_SQR(x) + LB_SQR(y)))
 
 //compare
-#define MIN2(a, b)          (((a) <= (b)) ? (a) : (b))
-#define MIN2_BOOL(a, b)      (((a) <= (b)) ? true : false)
-#define MIN3(a, b, c)       (MIN2(MIN2(a,b), c))
-#define MAX2(a, b)          (((a) >= (b)) ? (a) : (b))
-#define MAX2_BOOL(a, b)      (((a) >= (b)) ? true : false)
-#define MAX3(a, b, c)       (MAX2(MAX2(a,b), c))
+#define LB_MIN(a,b)             ((a) <= (b) ? (a) : (b))
+#define LB_MIN_BOOL(a,b)        ((a) <= (b) ? true : false)
+#define LB_MIN3(a,b,c)          (MIN2(MIN2(a,b), c))
+
+#define LB_MAX(a, b)            (((a) >= (b)) ? (a) : (b))
+#define LB_MAX_BOOL(a, b)       (((a) >= (b)) ? true : false)
+#define LB_MAX3(a, b, c)        (MAX2(MAX2(a,b), c))
 /* @} */
 
 /** \defgroup g_user_template User-friendly template functions */
@@ -224,7 +260,7 @@ T inline norm_a_rad(T a) {
  */
 template<typename T>
 T inline norm_a_deg(T a) {
-    return RAD2DEG(norm_a_rad(DEG2RAD(a)));
+    return RAD2DEG(norm_a_rad(LB_DEG2RAD(a)));
 }
 
 /**
@@ -252,9 +288,9 @@ T inline min_angle_diff(T a, T b) {
 }
 
 /**
- * Compute a cumulative summation
- * @param v
- * @param sum
+ * Compute a cumulative summation.
+ * @param v number vector
+ * @param sum output vector
  */
 template<typename T>
 void inline cum_sum(const std::vector<T>& v, std::vector<T>& sum) {
@@ -266,11 +302,16 @@ void inline cum_sum(const std::vector<T>& v, std::vector<T>& sum) {
     }
 }
 
+/**
+ * Compute a square summation
+ * @param v input
+ * @return square sum of all value in v
+ */
 template<typename T>
 T inline square_sum(const std::vector<T>& v) {
     T sum = 0;
     for(size_t i = 0; i < v.size(); i++) {
-        sum += SQR(v[i]);
+        sum += LB_SQR(v[i]);
     }
     return sum;
 }
@@ -449,6 +490,123 @@ namespace librobotics {
 #endif
     }
 
+    /*-------------------------------------------------------------------------
+     *
+     * Definition of the LibRobotics: Statistic Functions
+     *
+     -------------------------------------------------------------------------*/
+    /**
+     * Probability density function (PDF) of the normal distribution.
+     * @param v variance
+     * @param m mean
+     * @param x
+     * @return PDF(x)
+     */
+    inline double stat_pdf_normal_dist(double v, double m, double x) {
+        if(v <= 0) return 0;
+        return (1.0/sqrt(2*M_PI*v)) * exp(-LB_SQR(x - m) / (2.0 * v));
+    }
+
+    /**
+     * Probability density function (PDF) of the triangular distribution.
+     * @param v
+     * @param m
+     * @param x
+     * @return PDF(x)
+     */
+    inline double stat_pdf_normal_triangular_dist(double v, double m, double x) {
+        //SQRT6 = 2.449489743
+        if(v <= 0) return 0;
+        double p = (1.0/(2.449489743 * sqrt(v))) - (fabs(x - m)/(6.0 * v));
+        return LB_MAX(0.0, p);
+    }
+
+    /**
+     * PDF of the exponential distribution.
+     * @param rate
+     * @param x
+     * @return PDF(x)
+     */
+    inline double stat_pdf_exponential_dist(double rate, double x) {
+        if(x < 0) return 0;
+        return rate * exp(-rate * x);
+    }
+
+    /**
+     * Use a specific srand initialization to avoid multi-threading problems
+     * (executed only one time for a single program).
+     */
+    inline void  stat_srand() {
+        static bool first_run = true;
+        if(first_run) {
+            std::srand(utils_get_current_time());
+            unsigned char *const rand_mem = new unsigned char[1+std::rand()%2048];
+            std::srand((unsigned int)(std::rand() + (unsigned long)rand_mem));
+            delete[] rand_mem;
+            first_run = false;
+        }
+    }
+
+    /**
+     * Return a random variable between \f$[0,1]\f$ with respect to an uniform distribution.
+     */
+    inline double stat_rand() {
+        return (double)std::rand()/RAND_MAX;
+    }
+
+    /**
+     * Return a random variable between \f$[-1,1]\f$ with respect to an uniform distribution.
+     */
+    inline double stat_crand() {
+        return 1.0 - (2.0 * stat_rand());
+    }
+
+    /**
+     * Sample a random value from (approximate) normal distribution with zero mean.
+     * @param v variance
+     * @return random sample from normal distribution with zero mean
+     */
+    inline double stat_sample_normal_dist(double v) {
+        stat_srand();
+        double sum = 0;
+        for(int i = 0; i < 12; i++) {
+            sum += (stat_crand() * v);
+        }
+        return sum/2.0;
+    }
+
+    /**
+     * Sample a random value from (approximate) triangular distribution with zero mean.
+     * @param v variance
+     * @return random sample from triangular distribution with zero mean
+     */
+    inline double stat_sample_triangular_dist(double v) {
+        //SQRT(6) / 2 = 1.224744871
+        stat_srand();
+        return 1.224744871 * ((stat_crand()*v) +  (stat_crand()*v));
+    }
+
+    /**
+     * Sample a random value from uniform distribution in a circle.
+     * (http://www.comnets.uni-bremen.de/itg/itgfg521/per_eval/p001.html)
+     * @param a angle result \f$[-\pi, \pi]\f$
+     * @param r radius result \f$[-1, 1]\f$
+     */
+    inline void stat_sample_circle_uniform_dist(double& a, double& r) {
+        stat_srand();
+        a = stat_crand() * M_PI;
+        r = sqrt(stat_rand());
+    }
+
+    template<typename T>
+    void stat_stratified_random(std::vector<T>& v, int n) {
+        double k = 1.0/n;
+        double k_2 = k * 0.5;
+        if((int)v.size() != n) v.resize(n);
+        for(int i = 0; i < n; i++) {
+            v[i] = (k_2 + (k*i)) + (stat_rand() * k) - k_2;
+        }
+    }
 
 
 
@@ -584,7 +742,7 @@ namespace librobotics {
 
         ///Check for zero size vector
         bool is_zero() const {
-            return (this->size() <= IS_ZERO);
+            return (this->size() <= LB_IS_ZERO);
         }
 
         ///Get normalized vector
@@ -614,7 +772,7 @@ namespace librobotics {
          */
         template<typename T1>
         vec2 rot(T1 angle, bool rad = true) const {
-            if(!rad) angle = DEG2RAD(angle);
+            if(!rad) angle = LB_DEG2RAD(angle);
             T1 c = cos(angle);
             T1 s = sin(angle);
             return vec2((T)(x*c - y*s), (T)(x*s + y*c));
@@ -729,7 +887,7 @@ namespace librobotics {
 
         template<typename T1>
         T dist_to(const pose2<T1>& pose) {
-            return sqrt(SQR(pose.x - x) + SQR(pose.y - y));
+            return sqrt(LB_SQR(pose.x - x) + LB_SQR(pose.y - y));
         }
 
         template<typename T1>
@@ -824,6 +982,22 @@ namespace librobotics {
             return (x >= 0) && (x < mapsize.x) && (y >= 0) && (y < mapsize.y);
         }
 
+        bool get_random_pts(vec2<T>& pts, T max_mapprob = 0.0, int retry = 100) {
+            int x, y;
+            bool pass = false;
+            do {
+                x = (int)(stat_rand() * mapsize.x);
+                y = (int)(stat_rand() * mapsize.y);
+                pass = get_real_pts(x, y, pts);
+                if(pass) {
+                    if(mapprob[x][y] > max_mapprob) {
+                        pass = false;
+                    }
+                }
+            } while(!pass && (retry-- > 0));
+            return pass;
+        }
+
         /**
          * Get real world unit position of given grid coordinate.
          * @param x grid coordinate
@@ -833,8 +1007,8 @@ namespace librobotics {
          */
         bool get_real_pts(int x, int y, vec2<T>& pts) {
             if(is_inside(x, y)) {
-                pts.x = (x - center.x) * resolution;
-                pts.y = (y - center.y) * resolution;
+                pts.x = ((x - center.x) * resolution) + offset.x;
+                pts.y = ((y - center.y) * resolution) + offset.y;
                 return true;
             } else {
                 return false;
@@ -849,12 +1023,12 @@ namespace librobotics {
          * @return true if (x,y) is inside the map
          */
         bool get_grid_coordinate(T x, T y, vec2i& v) {
-            v.x = (int)(center.x + (int)ROUND((x-offset.x)/resolution));
-            v.y = (int)(center.y + (int)ROUND((y-offset.y)/resolution));
+            v.x = (int)(center.x + (int)LB_ROUND((x-offset.x)/resolution));
+            v.y = (int)(center.y + (int)LB_ROUND((y-offset.y)/resolution));
             if(is_inside(v.x, v.y))
                 return true;
             else {
-                warn("(%f, %f) is outside map", x, y);
+//                warn("(%f, %f) is outside map", x, y);
                 return false;
             }
         }
@@ -922,8 +1096,8 @@ namespace librobotics {
             double rayPosY = posY;
             double rayDirX = cos(dir);
             double rayDirY = sin(dir);
-            double deltaDistX = sqrt(1 + SQR(rayDirY) / SQR(rayDirX));
-            double deltaDistY = sqrt(1 + SQR(rayDirX) / SQR(rayDirY));
+            double deltaDistX = sqrt(1 + LB_SQR(rayDirY) / LB_SQR(rayDirX));
+            double deltaDistY = sqrt(1 + LB_SQR(rayDirX) / LB_SQR(rayDirY));
 
             //length of ray from current position to next x or y-side
             double sideDistX;
@@ -1006,7 +1180,7 @@ namespace librobotics {
                     for(int i = 0; i < angle_step; i++) {
                         result = get_ray_casting_hit_point(x, y, i * angle_res, hit);
                         if(result == 1) {
-                            ray_casting_cache[x][y][i] = sqrt(double(SQR(x-hit.x) + SQR(y-hit.y))) * resolution;
+                            ray_casting_cache[x][y][i] = LB_SIZE(x-hit.x, y-hit.y) * resolution;
                         } else {
                             ray_casting_cache[x][y][i] = -1;    //no measurement on that direction
                         }
@@ -1491,123 +1665,83 @@ namespace librobotics {
 
 
 
-
     /*-------------------------------------------------------------------------
      *
-     * Definition of the LibRobotics: Statistic Functions
+     * Definition of the LibRobotics: Particle filter Functions
      *
      -------------------------------------------------------------------------*/
-    /**
-     * Probability density function (PDF) of the normal distribution.
-     * @param v variance
-     * @param m mean
-     * @param x
-     * @return PDF(x)
-     */
-    inline double stat_pdf_normal_dist(double v, double m, double x) {
-        if(v <= 0) return 0;
-        return (1.0/sqrt(2*M_PI*v)) * exp(-SQR(x - m) / (2.0 * v));
-    }
-
-    /**
-     * Probability density function (PDF) of the triangular distribution.
-     * @param v
-     * @param m
-     * @param x
-     * @return PDF(x)
-     */
-    inline double stat_pdf_normal_triangular_dist(double v, double m, double x) {
-        //SQRT6 = 2.449489743
-        if(v <= 0) return 0;
-        double p = (1.0/(2.449489743 * sqrt(v))) - (fabs(x - m)/(6.0 * v));
-        return MAX2( 0.0, p);
-    }
-
-    /**
-     * PDF of the exponential distribution.
-     * @param rate
-     * @param x
-     * @return PDF(x)
-     */
-    inline double stat_pdf_exponential_dist(double rate, double x) {
-        if(x < 0) return 0;
-        return rate * exp(-rate * x);
-    }
-
-    /**
-     * Use a specific srand initialization to avoid multi-threading problems
-     * (executed only one time for a single program).
-     */
-    inline void  stat_srand() {
-        static bool first_run = true;
-        if(first_run) {
-            std::srand(utils_get_current_time());
-            unsigned char *const rand_mem = new unsigned char[1+std::rand()%2048];
-            std::srand((unsigned int)(std::rand() + (unsigned long)rand_mem));
-            delete[] rand_mem;
-            first_run = false;
+    template<typename T>
+    int pf_max_weight_index(const std::vector<T>& p) {
+        double max_w = -1;
+        int index = 0;
+        for(size_t i = 0; i < p.size(); i++ ) {
+            if(p[i].w > max_w) {
+                index = i;
+                max_w = p[i].w;
+            }
         }
-    }
-
-    /**
-     * Return a random variable between \f$[0,1]\f$ with respect to an uniform distribution.
-     */
-    inline double stat_rand() {
-        return (double)std::rand()/RAND_MAX;
-    }
-
-    /**
-     * Return a random variable between \f$[-1,1]\f$ with respect to an uniform distribution.
-     */
-    inline double stat_crand() {
-        return 1.0 - (2.0 * stat_rand());
-    }
-
-    /**
-     * Sample a random value from (approximate) normal distribution with zero mean.
-     * @param v variance
-     * @return random sample from normal distribution with zero mean
-     */
-    inline double stat_sample_normal_dist(double v) {
-        stat_srand();
-        double sum = 0;
-        for(int i = 0; i < 12; i++) {
-            sum += (stat_crand() * v);
-        }
-        return sum/2.0;
-    }
-
-    /**
-     * Sample a random value from (approximate) triangular distribution with zero mean.
-     * @param v variance
-     * @return random sample from triangular distribution with zero mean
-     */
-    inline double stat_sample_triangular_dist(double v) {
-        //SQRT(6) / 2 = 1.224744871
-        stat_srand();
-        return 1.224744871 * ((stat_crand()*v) +  (stat_crand()*v));
-    }
-
-    /**
-     * Sample a random value from uniform distribution in a circle.
-     * (http://www.comnets.uni-bremen.de/itg/itgfg521/per_eval/p001.html)
-     * @param a angle result \f$[-\pi, \pi]\f$
-     * @param r radius result \f$[-1, 1]\f$
-     */
-    inline void stat_sample_circle_uniform_dist(double& a, double& r) {
-        stat_srand();
-        a = stat_crand() * M_PI;
-        r = sqrt(stat_rand());
+        return index;
     }
 
     template<typename T>
-    void stat_stratified_random(std::vector<T>& v, int n) {
-        double k = 1.0/n;
-        double k_2 = k * 0.5;
-        if((int)v.size() != n) v.resize(n);
-        for(int i = 0; i < n; i++) {
-            v[i] = (k_2 + (k*i)) + (stat_rand() * k) - k_2;
+    void pf_normalize_weight(std::vector<T>& p) {
+        double sum = 0;
+        for(size_t i = 0; i < p.size(); i++ ) {
+            sum += p[i].w;
         }
+        for(size_t i = 0; i < p.size(); i++ ) {
+            p[i].w /= sum;
+        }
+    }
+
+    template<typename T>
+    bool pf_stratified_resample(std::vector<T>& p, int n_min) {
+        pf_normalize_weight(p);
+        size_t n = p.size();
+
+        if(n < 2)
+            return false;
+
+        double square_sum = 0;
+
+        //square sum
+        for(size_t i = 0; i < n; i++) {
+            square_sum += LB_SQR(p[i].w);
+        }
+
+        int n_eff = (int)(1.0/square_sum);
+        if(n_eff > n_min)
+            return false;
+
+        std::vector<double> cum_sum_w(n, 0.0);
+        std::vector<int> keep(n, 0);
+        std::vector<double> select(n, 0.0);
+
+        //cumulative sum
+        cum_sum_w[0] = p[0].w;
+        for(size_t i = 1; i < n; i++) {
+            cum_sum_w[i] = cum_sum_w[i-1] + p[i].w;
+        }
+
+        stat_stratified_random(select, n);
+        size_t ctr = 0;
+        for(size_t i = 0; i < n; i++) {
+            while((ctr < n) && (select[ctr] < cum_sum_w[i])) {
+                keep[ctr] = i;
+                ctr++;
+            }
+        }
+
+        std::vector<T> p_tmp(n);
+        for(size_t i = 0; i < n; i++) {
+            p_tmp[i] = p[keep[i]];
+        }
+
+        for(size_t i = 0; i < n; i++) {
+            p[i] = p_tmp[i];
+            p[i].w = 1.0/n;
+        }
+        return true;
     }
 
 
@@ -2208,9 +2342,9 @@ namespace librobotics {
             T tran = (u_pt.vec() - u_p.vec()).size();
             T rot2 = min_angle_diff(rot1, min_angle_diff(u_p.a, u_pt.a));
 
-            T rot1_sqr = SQR(rot1);
-            T tran_sqr = SQR(tran);
-            T rot2_sqr = SQR(rot2);
+            T rot1_sqr = LB_SQR(rot1);
+            T tran_sqr = LB_SQR(tran);
+            T rot2_sqr = LB_SQR(rot2);
 
             T nrot1 = rot1 + stat_sample_normal_dist(var[0]*rot1_sqr + var[1]*tran_sqr);
             T ntran = tran + stat_sample_normal_dist(var[2]*tran_sqr + var[3]*rot1_sqr + var[3]*rot2_sqr);
@@ -2240,7 +2374,7 @@ namespace librobotics {
         lrf_psm_cfg() :
             scale(1000),        //scale factor from 1 m
             maxError(1*scale),
-            searchWndAngle(DEG2RAD(20)),
+            searchWndAngle(LB_DEG2RAD(20)),
             lrfMaxRange(4*scale),
             lrfMinRange(0.1*scale),
             minValidPts(50),
@@ -2334,7 +2468,7 @@ namespace librobotics {
         T ri = 0;
         int idx = 0;
         size_t i = 0;
-        T C = SQR(0.7 * cfg.scale);
+        T C = LB_SQR(0.7 * cfg.scale);
 
         while((++iter < cfg.maxIter) && (small_corr_cnt < cfg.smallCorrCnt)) {
 
@@ -2446,8 +2580,8 @@ namespace librobotics {
 
                 for(int di = -wnd ; di <= wnd; di++) {
                     n = 0; e = 0;
-                    min_i = MAX2(-di, 0);
-                    max_i = MIN2(nPts, nPts-di);
+                    min_i = LB_MAX(-di, 0);
+                    max_i = LB_MIN(nPts, nPts-di);
                     for(ii = min_i; ii < max_i; ii++)//searching through the actual points
                     {
                         if((new_bad[ii] == 0) &&
@@ -2712,6 +2846,9 @@ namespace librobotics {
                 T map_angle_res;        //!< pre-compute ray casting angle resolution
 
                 int n_particles;        //!< number of particles
+                T min_particels;        //!< in percentage of n_particles \f$(0.0, 1.0)\f$
+                T a_slow, a_fast;       //!< decay rate for augmented MCL
+
                 T motion_var[6];        //!< \f$(\sigma_0...\sigma_3)\f$ in odometry mode \n \f$(\sigma_0...\sigma_5)\f$ in velocity mode
                 T map_var;              //!< compute directly from map resolution
                 T z_max_range;          //!< max measurement range
@@ -2731,16 +2868,20 @@ namespace librobotics {
                         throw LibRoboticsIOException("Cannot load file %s in %s", filename.c_str(), __FUNCTION__);
                     }
 
-                    std::string tmp;    //dummy date for load_cfg_from_text_file
+                    std::string tmp;    //dummy data for load_cfg_from_text_file macro
                     std::cout << "======= mcl_grid2::configuration =======\n";
                     load_cfg_from_text_file(mapfile, file);
                     load_cfg_from_text_file(map_offset, file);
                     load_cfg_from_text_file(map_center, file);
                     load_cfg_from_text_file(map_res, file);
                     load_cfg_from_text_file(map_angle_res, file);
-                    map_angle_res = DEG2RAD(map_angle_res);
+                    map_angle_res = LB_DEG2RAD(map_angle_res);
 
+                    //particles settings
                     load_cfg_from_text_file(n_particles, file);
+                    load_cfg_from_text_file(min_particels, file);
+                    load_cfg_from_text_file(a_slow, file);
+                    load_cfg_from_text_file(a_fast, file);
 
                     //motion
                     load_cfg_from_text_file(motion_var[0], file);
@@ -2795,6 +2936,8 @@ namespace librobotics {
                 std::vector<mcl_grid2::particle<T> > p_tmp;     //!< temporary particle set
                 map_grid2<T> map;                               //!< gird map
                 pose2<T> last_odo_pose;                         //!< last odometry position
+                T w_slow;
+                T w_fast;
 
                 void initialize(mcl_grid2::configuration<T>& cfg) {
                     p.resize(cfg.n_particles);
@@ -2803,6 +2946,8 @@ namespace librobotics {
                                    cfg.map_offset,
                                    cfg.map_center,
                                    cfg.map_res);
+                    w_slow = 0.0;
+                    w_fast = 0.0;
                 }
 
                 void initialize_particle(int mode, pose2<T> start, T param0, T param1) {
@@ -2812,14 +2957,14 @@ namespace librobotics {
                             for(i = 0; i < p.size(); i++)
                                 p[i].pose = start;
                             break;
-                        case 1: //all at start point with uniform random angle
+                        case 1: //case 1 with uniform random angle
                             for(i = 0; i < p.size(); i++) {
                                 p[i].pose.x = start.x;
                                 p[i].pose.y = start.y;
                                 p[i].pose.a = stat_crand() * M_PI;
                             }
                             break;
-                        case 2: //all uniform random (x,y) in circle at start point
+                        case 2: //all in circle uniform random  at start point
                         {
                             double r, a;
                             for(i = 0; i < p.size(); i++) {
@@ -2841,7 +2986,7 @@ namespace librobotics {
                             }
                             break;
                         }
-                        case 4: //case 2 with normal distribution random angle
+                        case 4: //case 2 with normal distribution random angle around start angle
                         {
                             double r, a;
                             for(i = 0; i < p.size(); i++) {
@@ -2852,9 +2997,47 @@ namespace librobotics {
                             }
                             break;
                         }
-                        case 5: //all uniform random (x,y) over map with uniform random angle
-                            throw LibRoboticsWarningException("case 4,5 are not yet implement in %s", __FUNCTION__);
+                        case 5: //all uniform random over map
+                        {
+                            vec2d pts;
+                            for(i = 0; i < p.size(); i++) {
+                                map.get_random_pts(pts);
+                                p[i].pose.x = pts.x;
+                                p[i].pose.y = pts.y;
+                                p[i].pose.a = start.a;
+                            }
                             break;
+                        }
+                        case 6: //case 5 with uniform random angle
+                        {
+                            vec2d pts;
+                            for(i = 0; i < p.size(); i++) {
+                                map.get_random_pts(pts);
+                                p[i].pose.x = pts.x;
+                                p[i].pose.y = pts.y;
+                                p[i].pose.a = stat_crand() * M_PI;
+                            }
+                            break;
+                        }
+                        case 7: //case 5 with normal distribution random angle around start angle
+                        {
+                            vec2d pts;
+                            for(i = 0; i < p.size(); i++) {
+                                map.get_random_pts(pts);
+                                p[i].pose.x = pts.x;
+                                p[i].pose.y = pts.y;
+                                p[i].pose.a = norm_a_rad(start.a + stat_sample_normal_dist(param1));
+                            }
+                            break;
+                        }
+                        case 8:
+                        default:
+                        {
+
+
+                            throw LibRoboticsWarningException("This case are not yet implement in %s", __FUNCTION__);
+                            break;
+                        }
                     }//switch
 
                     //initialize weight
@@ -2862,64 +3045,6 @@ namespace librobotics {
                         PRINTVAR(p[i]);
                         p[i].w = 1.0/p.size();
                     }
-
-                }
-
-                void normalize_weight() {
-                    T sum = 0;
-                    for(size_t i = 0; i < p.size(); i++ ) {
-                        sum += p[i].w;
-                    }
-                    for(size_t i = 0; i < p.size(); i++ ) {
-                        p[i].w /= sum;
-                    }
-                }
-
-                bool stratified_resample(int n_min) {
-                    normalize_weight();
-                    size_t n = p.size();
-
-                    std::vector<double> cum_sum_w(n, 0.0);
-                    std::vector<int> keep(n, 0);
-                    std::vector<double> select(n, 0.0);
-                    double square_sum = 0;
-
-                    //square sum
-                    for(size_t i = 0; i < n; i++) {
-                        square_sum += SQR(p[i].w);
-                    }
-
-                    //cumulative sum
-                    cum_sum_w[0] = p[0].w;
-                    for(size_t i = 1; i < n; i++) {
-                        cum_sum_w[i] = cum_sum_w[i-1] + p[i].w;
-                    }
-
-                    int n_eff = (int)(1.0/square_sum);
-
-                    PRINTVAR(n_eff);
-
-                    if(n_eff < n_min) {
-                        stat_stratified_random(select, n);
-                        size_t ctr = 0;
-                        for(size_t i = 0; i < n; i++) {
-                            while((ctr < n) && (select[ctr] < cum_sum_w[i])) {
-                                keep[ctr] = i;
-                                ctr++;
-                            }
-                        }
-
-                        for(size_t i = 0; i < n; i++) {
-                            p_tmp[i].pose = p[keep[i]].pose;
-                        }
-
-                        for(size_t i = 0; i < n; i++) {
-                            p[i].pose = p_tmp[i].pose;
-                            p[i].w = 1.0/n;
-                        }
-                        return true;
-                    }
-                    return false;
                 }
             };
 
@@ -2977,6 +3102,145 @@ namespace librobotics {
                 }
                 data.last_odo_pose = odo_pose;
                 return 0;
+            }
+
+
+            template<typename T>
+            int update_with_odomety_augmented(mcl_grid2::configuration<T>& cfg,
+                                              mcl_grid2::data<T>& data,
+                                              std::vector<vec2<T> > z,
+                                              pose2<T> odo_pose,
+                                              int n_min)
+            {
+                //=====================================================
+                //                    Motion Update
+                //=====================================================
+                T w_avg = 0.0;
+                for(size_t n = 0; n < data.p.size(); n++) {
+                    //predict position
+                    data.p_tmp[n].pose =
+                        math_model::odometry_motion_sample(odo_pose,
+                                                           data.last_odo_pose,
+                                                           data.p[n].pose,
+                                                           cfg.motion_var);
+                    //check measurement
+                    vec2i grid_coor;
+                    T sense_angle = 0;
+                    int sense_idx = 0;
+                    T zp;
+
+                    if(data.map.get_grid_coordinate(data.p_tmp[n].pose.x, data.p_tmp[n].pose.y, grid_coor)) {
+                        if(data.map.ray_casting_cache[grid_coor.x][grid_coor.y].size() != 0) {
+                            data.p_tmp[n].w = 1.0;
+                            for(size_t i = 0; i < z.size(); i++) {
+                            //find nearest measurement in pre-computed ray casting
+
+                                //compute sense angle (convert from local coordinate to global coordinate)
+                                sense_angle = norm_a_rad(z[i].theta() + data.p_tmp[n].pose.a);
+
+                                //get index
+                                sense_idx = (int)(sense_angle/data.map.angle_res);
+                                if(sense_idx < 0) sense_idx += data.map.angle_step;
+
+                                //compute PDF (can speed up by lookup table)
+                                zp = math_model::beam_range_finder_measurement(z[i].size(),
+                                                                               data.map.ray_casting_cache[grid_coor.x][grid_coor.y][sense_idx],
+                                                                               cfg.z_max_range,
+                                                                               cfg.z_hit_var,
+                                                                               cfg.z_short_rate,
+                                                                               cfg.z_weight);
+                                data.p_tmp[n].w *= zp;
+                            }
+                        } else {
+                            data.p_tmp[n].w = 0;
+                        }
+
+                    } else {
+                        data.p_tmp[n].w = 0;
+                    }
+
+                    w_avg = w_avg + (data.p_tmp[n].w/data.p.size());
+                }
+
+                //update position
+                data.last_odo_pose = odo_pose;
+                //=====================================================
+
+
+
+
+
+
+                //=====================================================
+                //                       re-sample
+                //=====================================================
+                size_t np = data.p_tmp.size();
+
+                data.w_slow = data.w_slow + cfg.a_slow*(w_avg - data.w_slow);
+                data.w_fast = data.w_fast + cfg.a_fast*(w_avg - data.w_fast);
+                T random_prob = LB_MAX(0.0, 1.0 - (data.w_fast / data.w_slow));
+                int n_random = random_prob * cfg.n_particles;
+
+                PRINTVAR(data.w_slow);
+                PRINTVAR(data.w_fast);
+                PRINTVAR(random_prob);
+                PRINTVAR(n_random);
+
+
+                pf_normalize_weight(data.p_tmp);
+                double square_sum = 0;
+
+                //square sum
+                for(size_t i = 0; i < np; i++) {
+                   square_sum += LB_SQR(data.p_tmp[i].w);
+                }
+                PRINTVAR(square_sum);
+
+                int n_eff = (int)(1.0/square_sum);
+                PRINTVAR(n_eff);
+
+                if(n_eff > n_min) {
+                    data.p = data.p_tmp;
+                    return 0;
+                }
+
+                PRINTVALUE("Do Resample");
+
+                std::vector<double> cum_sum_w(np, 0.0);
+                std::vector<int> keep(np, 0);
+                std::vector<double> select(np, 0.0);
+
+                //cumulative sum
+                cum_sum_w[0] = data.p_tmp[0].w;
+                for(size_t i = 1; i < np; i++) {
+                    cum_sum_w[i] = cum_sum_w[i-1] + data.p_tmp[i].w;
+                }
+
+
+                stat_stratified_random(select, np);
+                size_t ctr = 0;
+                for(size_t i = 0; i < np; i++) {
+                    std::cout << ctr << " " << select[ctr] << " " << i << " " << cum_sum_w[i] << "\n";
+                    while((ctr < np) && (select[ctr] < cum_sum_w[i])) {
+                        keep[ctr] = i;
+                        ctr++;
+                    }
+                }
+
+                for(size_t i = 0; i < np; i++) {
+                    std::cout << keep[i] << " " << select[i] << " " << cum_sum_w[i] << "\n";
+                }
+
+
+                for(size_t i = 0; i < np; i++) {
+                    data.p[i].pose = data.p_tmp[keep[i]].pose;
+                    data.p[i].w = 1.0/np;
+                }
+
+
+
+                data.last_odo_pose = odo_pose;
+                return 1;
             }
         }
 
@@ -3191,7 +3455,7 @@ namespace librobotics {
                         num_subseg -= open_segment;
                         do {
                             good_angle = (k_begin[i] + (open_segment/2) + num_subseg) * angle_res;
-                            good_angle = DEG2RAD(good_angle);
+                            good_angle = LB_DEG2RAD(good_angle);
                             dir.x = cos(good_angle);
                             dir.y = sin(good_angle);
                             d = dir ^ target.norm();
@@ -3206,7 +3470,7 @@ namespace librobotics {
                             num_subseg--;
                         } while (num_subseg >= 0);
                     } else {
-                        good_angle = DEG2RAD(center * angle_res);
+                        good_angle = LB_DEG2RAD(center * angle_res);
                         dir = vec2<T>(cos(good_angle), sin(good_angle));
                         d = dir ^ target.norm();
                         c = dir * target.norm();
