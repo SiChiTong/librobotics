@@ -5,7 +5,7 @@
  *      Author: mahisorn
  */
 
-#if 1
+#if 0
 #include <iostream>
 
 #include <CImg.h>
@@ -51,6 +51,7 @@ vector<double> fi(LRF_NUM_RANGE);
 vector<double> co(LRF_NUM_RANGE);
 vector<double> si(LRF_NUM_RANGE);
 logdata_simple_odo_lrf<double, int> log_data;
+logdata_simple_odo_us<double, double> us_log_data;
 vector<int> lrf(LRF_NUM_RANGE);
 vector<vec2d> lrf_pts;
 int log_step = 0;
@@ -109,21 +110,35 @@ void draw_particle(CImg<unsigned char>& img,
 int main(int argc, char* argv[]) {
     ofstream log;
     log.open("log.dat");
-    log_data.open("../test_data/log_1224598716.log", "Odometry", "Laser");
+//    log_data.open("../test_data/log_1224598716.log", "Odometry", "Laser");
+    us_log_data.open("../test_data/cart/log_1229625872.log", "Odometry", "US");
+    if(argc > 1) {
+        log_data.open(argv[1], "Odometry", "LRF0");
+    } else {
+        log_data.open("../test_data/log_1224597477.log", "Odometry", "Laser");
+    }
+    us_log_data.read_all();
     log_data.read_all();
     lrf_init_fi_table(LB_DEG2RAD(-135), LB_DEG2RAD(0.3515625), fi);
     lrf_init_cos_sin_table(LB_DEG2RAD(-135), LB_DEG2RAD(0.3515625), co, si);
     //threshold and filter
     for(int i = 0; i < log_data.step; i++) {
+        log_data.odo[i].x *= 0.001;
+        log_data.odo[i].y *= 0.001;
         lrf_range_median_filter(log_data.lrf[i]);
         lrf_range_threshold(log_data.lrf[i], 400, 0, 4000, 0);
+    }
+
+    for(int i = 0; i < us_log_data.step; i++) {
+        us_log_data.odo[i].x *= 0.001;
+        us_log_data.odo[i].y *= 0.001;
     }
 
 
     mcl_cfg.load("../test_data/mcl_grid2d.txt");
     mcl_data.initialize(mcl_cfg);
     mcl_data.map.compute_ray_casting_cache(mcl_cfg.map_angle_res);
-    mcl_data.initialize_particle(4, pose2d(2.43, 3.3, 0.0), 0.25, 0.1);
+    mcl_data.initialize_particle(4, pose2d(3.5, 8.5, 0.0), 0.2, 0.1);
 
 
     CImg<unsigned char> map_image = mcl_data.map.get_image();
@@ -405,12 +420,21 @@ int main(int argc, char* argv[]) {
 
             //get sensor data
             cout << "====== get sensor data ======\n";
-            measurement_z.clear();
-            lrf_scan_point_from_scan_range(log_data.lrf[log_step], co, si, lrf_pts, 0.001);
-            for(size_t i = 0; i < lrf_pts.size(); i+=40) {
-                if(lrf_pts[i].size() > 0.1) {
-                    //measurement_z.push_back(lrf_pts[i] + vec2d(0.22, 0.0));
-                    measurement_z.push_back(lrf_pts[i]);
+//            measurement_z.clear();
+//            lrf_scan_point_from_scan_range(log_data.lrf[log_step], co, si, lrf_pts, 0.001);
+//            for(size_t i = 0; i < lrf_pts.size(); i+=30) {
+//                if(lrf_pts[i].size() > 0.1) {
+//                    measurement_z.push_back(lrf_pts[i] + vec2d(0.14, 0.0));
+////                    measurement_z.push_back(lrf_pts[i]);
+//                }
+//            }
+            measurement_z = us_log_data.us[log_step];
+            for(size_t i = 0; i < measurement_z.size(); i++) {
+                measurement_z[i].x *= 0.001;
+                measurement_z[i].y *= 0.001;
+                if(measurement_z[i].size() < 0.3 || measurement_z[i].size() > 3.0) {
+                    measurement_z[i].x = 0.0;
+                    measurement_z[i].y = 0.0;
                 }
             }
             PRINTVAR(measurement_z.size());
@@ -419,11 +443,17 @@ int main(int argc, char* argv[]) {
 
             //update
             cout << "====== update ======\n";
+//            localization::mcl_grid2::update_with_odomety_augmented(mcl_cfg,
+//                                                         mcl_data,
+//                                                         measurement_z,
+//                                                         log_data.odo[log_step],
+//                                                         (int)(mcl_cfg.min_particels *  mcl_cfg.n_particles));
+
             localization::mcl_grid2::update_with_odomety_augmented(mcl_cfg,
-                                                         mcl_data,
-                                                         measurement_z,
-                                                         log_data.odo[log_step],
-                                                         (int)(mcl_cfg.min_particels *  mcl_cfg.n_particles));
+                                                                   mcl_data,
+                                                                   measurement_z,
+                                                                   us_log_data.odo[log_step],
+                                                                   (int)(mcl_cfg.min_particels *  mcl_cfg.n_particles));
 
 //            PRINTVEC(mcl_data.p);
 
@@ -439,7 +469,7 @@ int main(int argc, char* argv[]) {
           int max_idx = pf_max_weight_index(mcl_data.p);
 
 
-          log << log_data.odo[log_step] << " " << mcl_data.p[max_idx].pose << "\n";
+//          log << log_data.odo[log_step] << " " << mcl_data.p[max_idx].pose << "\n";
 
 
 
@@ -457,10 +487,21 @@ int main(int argc, char* argv[]) {
              draw_particle(map_image_tmp, mcl_data.p, 0.02, ZOOM_FACTOR);
              update_map_z_display = true;
 
+             pose2d avg_pose;
+             for(size_t i = 0; i < mcl_data.p.size(); i++) {
+                 avg_pose.x += mcl_data.p[i].pose.x;
+                 avg_pose.y += mcl_data.p[i].pose.y;
+                 avg_pose.a += mcl_data.p[i].pose.a;
+             }
+             avg_pose.x /= mcl_data.p.size();
+             avg_pose.y /= mcl_data.p.size();
+             avg_pose.a /= mcl_data.p.size();
+
              PRINTVAR(mcl_data.p[max_idx]);
-             draw_robot(map_image_tmp, mcl_data.p[max_idx].pose, 0.25, ZOOM_FACTOR);
+             PRINTVAR(avg_pose);
+//             draw_robot(map_image_tmp, avg_pose, 0.25, ZOOM_FACTOR);
 
-
+             log << log_data.odo[log_step] << " " << avg_pose << "\n";
 
             //draw particle
          //   draw_particle(map_image_tmp, mcl_data.p, 0.05, ZOOM_FACTOR);
@@ -470,8 +511,10 @@ int main(int argc, char* argv[]) {
             double r;
             double rad;
             vec2i grid;
-            if(mcl_data.map.get_grid_coordinate(mcl_data.p[max_idx].pose.x,
-                                                mcl_data.p[max_idx].pose.y, grid))
+//            if(mcl_data.map.get_grid_coordinate(mcl_data.p[max_idx].pose.x,
+//                                                mcl_data.p[max_idx].pose.y, grid))
+            if(mcl_data.map.get_grid_coordinate(avg_pose.x,
+                                                avg_pose.y, grid))
             {
 
                 grid *= ZOOM_FACTOR;

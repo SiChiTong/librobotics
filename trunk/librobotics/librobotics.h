@@ -474,7 +474,7 @@ namespace librobotics {
 
     /**
      * Get current time of day
-     * \return time in second
+     * \return time in millisecond
      */
     inline unsigned long utils_get_current_time() {
 #if librobotics_OS == 1
@@ -1452,7 +1452,7 @@ namespace librobotics {
                 if(cnt % 10 == 0)
                     std::cerr << ".";
             }
-            std::cerr << "done with " << step << "steps read\n";
+            std::cerr << "done with " << step << " steps read\n";
             return step;
         }
 
@@ -1489,6 +1489,79 @@ namespace librobotics {
                     log_file >> ranges[i];
                 }
                 lrf.push_back(ranges);
+            } else {
+                throw LibRoboticsRuntimeException("Uninterpretable line with label: %s in %s", tmp.c_str(), fn.c_str());
+            }
+            return true;
+        }
+    };
+
+    template<typename T1, typename T2> struct logdata_simple_odo_us {
+        std::vector<pose2<T1> > odo;
+        std::vector<std::vector<vec2<T2> > > us;
+        int step;
+        std::ifstream log_file;
+        std::string label_odo;
+        std::string label_us;
+        std::string fn;
+
+        logdata_simple_odo_us() : step(0) { }
+
+        void open(const std::string& filename,
+                  const std::string& odo_label,
+                  const std::string& us_label)
+        {
+            open_file_with_exception(log_file, filename);
+            label_odo = odo_label;
+            label_us = us_label;
+            fn = filename;
+        }
+
+        int read_all() {
+            std::cerr << "Read all log data...";
+            int cnt = 0;
+            while(read_one_step()) {
+                cnt++;
+                if(cnt % 10 == 0)
+                    std::cerr << ".";
+            }
+            std::cerr << "done with " << step << " steps read\n";
+            return step;
+        }
+
+        bool read_one_step() {
+            //read 2 line (odo and lrf)
+            if(!read_one_line() || !read_one_line()) {
+                return false;
+            }
+            step++;
+            return true;
+        }
+
+        bool read_one_line() {
+            //get label
+            std::string tmp;
+            log_file >> tmp;
+
+            if(log_file.eof()) {
+                warn("End of %s", fn.c_str());
+                return false;
+            }
+
+            if(tmp.compare(label_odo) == 0) {
+                pose2<T1> p;
+                log_file >> p;
+                p.a = norm_a_rad(p.a);
+                odo.push_back(p);
+            } else
+            if(tmp.compare(label_us) == 0) {
+                int max;
+                log_file >> max;
+                std::vector<vec2<T2> > ranges(max);
+                for (int i = 0; i < max; i++) {
+                    log_file >> ranges[i];
+                }
+                us.push_back(ranges);
             } else {
                 throw LibRoboticsRuntimeException("Uninterpretable line with label: %s in %s", tmp.c_str(), fn.c_str());
             }
@@ -1681,6 +1754,11 @@ namespace librobotics {
             }
         }
         return index;
+    }
+
+    template<typename T>
+    bool pf_weight_compare(const T& p1, const T& p2) {
+       return (p1.w < p2.w);
     }
 
     template<typename T>
@@ -2848,7 +2926,7 @@ namespace librobotics {
                 int n_particles;        //!< number of particles
                 T min_particels;        //!< in percentage of n_particles \f$(0.0, 1.0)\f$
                 T a_slow, a_fast;       //!< decay rate for augmented MCL
-
+                T v_factor;
                 T motion_var[6];        //!< \f$(\sigma_0...\sigma_3)\f$ in odometry mode \n \f$(\sigma_0...\sigma_5)\f$ in velocity mode
                 T map_var;              //!< compute directly from map resolution
                 T z_max_range;          //!< max measurement range
@@ -2882,6 +2960,7 @@ namespace librobotics {
                     load_cfg_from_text_file(min_particels, file);
                     load_cfg_from_text_file(a_slow, file);
                     load_cfg_from_text_file(a_fast, file);
+                    load_cfg_from_text_file(v_factor, file);
 
                     //motion
                     load_cfg_from_text_file(motion_var[0], file);
@@ -2957,7 +3036,7 @@ namespace librobotics {
                             for(i = 0; i < p.size(); i++)
                                 p[i].pose = start;
                             break;
-                        case 1: //case 1 with uniform random angle
+                        case 1: //case 0 with uniform random angle
                             for(i = 0; i < p.size(); i++) {
                                 p[i].pose.x = start.x;
                                 p[i].pose.y = start.y;
@@ -3042,7 +3121,6 @@ namespace librobotics {
 
                     //initialize weight
                     for(i = 0; i < p.size(); i++) {
-                        PRINTVAR(p[i]);
                         p[i].w = 1.0/p.size();
                     }
                 }
@@ -3158,7 +3236,6 @@ namespace librobotics {
                     } else {
                         data.p_tmp[n].w = 0;
                     }
-
                     w_avg = w_avg + (data.p_tmp[n].w/data.p.size());
                 }
 
@@ -3166,9 +3243,8 @@ namespace librobotics {
                 data.last_odo_pose = odo_pose;
                 //=====================================================
 
-
-
-
+//                std::sort(data.p_tmp.begin(), data.p_tmp.end(), pf_weight_compare<mcl_grid2::particle<T> >);
+//                PRINTVEC(data.p_tmp);
 
 
                 //=====================================================
@@ -3178,7 +3254,7 @@ namespace librobotics {
 
                 data.w_slow = data.w_slow + cfg.a_slow*(w_avg - data.w_slow);
                 data.w_fast = data.w_fast + cfg.a_fast*(w_avg - data.w_fast);
-                T random_prob = LB_MAX(0.0, 1.0 - (data.w_fast / data.w_slow));
+                T random_prob = LB_MAX(0.0, 1.0 - (cfg.v_factor*(data.w_fast / data.w_slow)));
                 int n_random = random_prob * cfg.n_particles;
 
                 PRINTVAR(data.w_slow);
@@ -3194,7 +3270,7 @@ namespace librobotics {
                 for(size_t i = 0; i < np; i++) {
                    square_sum += LB_SQR(data.p_tmp[i].w);
                 }
-                PRINTVAR(square_sum);
+
 
                 int n_eff = (int)(1.0/square_sum);
                 PRINTVAR(n_eff);
@@ -3216,11 +3292,9 @@ namespace librobotics {
                     cum_sum_w[i] = cum_sum_w[i-1] + data.p_tmp[i].w;
                 }
 
-
                 stat_stratified_random(select, np);
                 size_t ctr = 0;
                 for(size_t i = 0; i < np; i++) {
-                    std::cout << ctr << " " << select[ctr] << " " << i << " " << cum_sum_w[i] << "\n";
                     while((ctr < np) && (select[ctr] < cum_sum_w[i])) {
                         keep[ctr] = i;
                         ctr++;
@@ -3228,16 +3302,9 @@ namespace librobotics {
                 }
 
                 for(size_t i = 0; i < np; i++) {
-                    std::cout << keep[i] << " " << select[i] << " " << cum_sum_w[i] << "\n";
-                }
-
-
-                for(size_t i = 0; i < np; i++) {
                     data.p[i].pose = data.p_tmp[keep[i]].pose;
                     data.p[i].w = 1.0/np;
                 }
-
-
 
                 data.last_odo_pose = odo_pose;
                 return 1;
