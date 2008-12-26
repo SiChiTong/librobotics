@@ -8,9 +8,10 @@
 #if 1
 
 
-#include "../librobotics.h"
+
 #include <boost/thread/thread.hpp>
 #include <iostream>
+#include "../librobotics.h"
 #include "device/hokuyo_urg.h"
 
 using namespace std;

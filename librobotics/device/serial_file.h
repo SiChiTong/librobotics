@@ -20,8 +20,8 @@ public:
     virtual ~serial_file() { }
 
     /** Open and set up specified serial port
-     * @param aDevNme [in] Serial port device file name
-     * @param aSpeed [in] Communication speed(bps)
+     * @param aDevName [in] Serial port device file name
+     * @param aSpeed [in] Communication baudrate in bps
      * @return Serial port file handle
      * Returns NULL when failed to open.
      */

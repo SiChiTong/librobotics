@@ -501,8 +501,8 @@
 <option id="gnu.cpp.compiler.exe.release.option.optimization.level.600160809" name="Optimization Level" superClass="gnu.cpp.compiler.exe.release.option.optimization.level" value="gnu.cpp.compiler.optimization.level.most" valueType="enumerated"/>
 <option id="gnu.cpp.compiler.exe.release.option.debugging.level.483982483" name="Debug Level" superClass="gnu.cpp.compiler.exe.release.option.debugging.level" value="gnu.cpp.compiler.debugging.level.none" valueType="enumerated"/>
 <option id="gnu.cpp.compiler.option.include.paths.593500441" name="Include paths (-I)" superClass="gnu.cpp.compiler.option.include.paths" valueType="includePath">
-<listOptionValue builtIn="false" value="&quot;${workspace_loc:/librobotics}&quot;"/>
 <listOptionValue builtIn="false" value="/usr/local/include/boost-1_37"/>
+<listOptionValue builtIn="false" value="&quot;${workspace_loc:/librobotics}&quot;"/>
 </option>
 <inputType id="cdt.managedbuild.tool.gnu.cpp.compiler.input.408789737" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.input"/>
 </tool>
@@ -518,6 +518,7 @@
 <listOptionValue builtIn="false" value="boost_thread-gcc43-mt"/>
 <listOptionValue builtIn="false" value="X11"/>
 </option>
+<option id="gnu.cpp.link.option.flags.1782151843" name="Linker flags" superClass="gnu.cpp.link.option.flags" value="" valueType="string"/>
 <inputType id="cdt.managedbuild.tool.gnu.cpp.linker.input.1531501159" superClass="cdt.managedbuild.tool.gnu.cpp.linker.input">
 <additionalInput kind="additionalinputdependency" paths="$(USER_OBJS)"/>
 <additionalInput kind="additionalinput" paths="$(LIBS)"/>
