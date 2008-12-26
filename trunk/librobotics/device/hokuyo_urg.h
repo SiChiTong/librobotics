@@ -11,6 +11,7 @@
 #include "serial_file.h"
 
 #define URG_ENABLE_SCIP20           "SCIP2.0\n"
+
 #define URG_SCIP10_NO_ERROR         "0\n"
 #define URG_SCIP10_GET_VERSION      "V\n"
 #define URG_SCIP10_LASER_ON         "L0\n"
