@@ -3604,6 +3604,144 @@ namespace librobotics {
     }//path_planning
 
 
+    namespace control_function {
+        template<typename T1, typename T2>
+        void encoder_to_odometry(T1 d_encoder_left, T1 d_encoder_right,
+                                 T1 encoder_CPT, T1 wheel_dist,
+                                 T1 dist_pre_turn_left, T1 dist_pre_turn_right,
+                                 pose2<T2>& last_odo)
+        {
+            double dist_left = dist_pre_turn_left * (d_encoder_left/encoder_CPT);
+            double dist_right = dist_pre_turn_right * (-d_encoder_right/encoder_CPT);
+            double ds = (dist_left + dist_right) * 0.5;
+            double da = (dist_right - dist_left) / wheel_dist;
+
+            last_odo.a += da;
+            last_odo.a = norm_a_rad(last_odo.a);
+            last_odo.x += (T2)(ds*cos(last_odo.a));
+            last_odo.y += (T2)(ds*sin(last_odo.a));
+        }
+
+        template <typename T>
+        struct pid {
+            T p_err, d_err, i_err;
+            T kp, ki, kd, il;
+
+            pid()
+                : p_err(0), d_err(0), i_err(0),
+                  kp(0), ki(0), kd(0), il(0)
+            {}
+
+            pid(T p, T i, T d, T l)
+                : p_err(0), d_err(0), i_err(0),
+                  kp(p), ki(i), kd(d), il(l)
+            {}
+
+            pid(const pid<T>& pid_)
+                :kp(pid_.kp), ki(pid_.ki), kd(pid_.kd), il(pid_.il)
+            {}
+
+            void update_gain(T p, T i, T d, T l) {
+                kp = p; ki = i; kd = d; il = l;
+                reset_err();
+            }
+
+            void update_kp(T p) {kp = p; reset_err();}
+            void update_ki(T i) {ki = i; reset_err();}
+            void update_kd(T d) {kd = d; reset_err();}
+            void update_il(T l) {il = l; reset_err();}
+
+            void reset_err() {
+                p_err = 0; d_err = 0; i_err = 0;
+            }
+
+            T update(T err) {
+                d_err = err - p_err;
+                p_err = err;
+                i_err += d_err;
+
+                if(((T)fabs(i_err)) > il) {
+                    if(i_err > 0)
+                        i_err = il;
+                    else
+                        i_err = -il;
+                }
+
+                return (kp*p_err) + (kd*d_err) + (ki*i_err);
+            }
+        };
+
+        typedef pid<int> pidi;
+        typedef pid<long> pidl;
+        typedef pid<float> pidf;
+        typedef pid<double> pidd;
+
+
+        template <typename T>
+        struct simple_velocity_control {
+            T target, current;
+            T max_vel;
+            T max_acc;
+
+            simple_velocity_control()
+                : target(0), current(0),
+                  max_vel(0),
+                  max_acc(0.0)
+            {}
+
+            simple_velocity_control(T v, T a)
+                : target(0), current(0),
+                  max_vel(v),
+                  max_acc(a)
+            {}
+
+            void update_vel_acc(T a, T v) {
+                max_acc = a;
+                max_vel = v;
+            }
+
+            void update_acc(T a) {
+                max_acc = a;
+            }
+
+            void update_target(T v) {
+                target = v;
+            }
+
+            T get_next_vel( ) {
+                T tmp;
+                if(target > current)
+                    tmp = current + max_acc;
+                else if(target < current)
+                    tmp = current - max_acc;
+                else
+                    tmp = current;
+
+                if(fabs(tmp) > max_vel) {
+                    if(tmp > 0)
+                        tmp = max_vel;
+                    else
+                        tmp = -max_vel;
+                }
+                current = tmp;
+                return current;
+            }
+
+            T get_vel_error(T real) {
+                return current - real;
+            }
+        };
+
+        typedef simple_velocity_control<int> svci;
+        typedef simple_velocity_control<long> svcl;
+        typedef simple_velocity_control<float> svcf;
+        typedef simple_velocity_control<double> svcd;
+
+
+    }
+
+
+
 }
 
 #endif //#ifndef librobotics_version
