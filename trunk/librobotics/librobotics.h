@@ -3669,6 +3669,11 @@ namespace librobotics {
 
                 return (kp*p_err) + (kd*d_err) + (ki*i_err);
             }
+
+            ///Support for output stream operator
+            friend std::ostream& operator << (std::ostream& os, const pid<T>& p) {
+                return os << p.kp << " " << p.ki << " " << p.kd << " " << p.il;
+            }
         };
 
         typedef pid<int> pidi;
@@ -3708,6 +3713,11 @@ namespace librobotics {
                 target = v;
             }
 
+            void reset() {
+                target = 0;
+                current = 0;
+            }
+
             T get_next_vel( ) {
                 T tmp;
                 if(target > current)
@@ -3729,6 +3739,11 @@ namespace librobotics {
 
             T get_vel_error(T real) {
                 return current - real;
+            }
+
+            ///Support for output stream operator
+            friend std::ostream& operator << (std::ostream& os, const simple_velocity_control<T>& v) {
+                return os << v.max_vel << " " << v.max_acc;
             }
         };
 
