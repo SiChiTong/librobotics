@@ -10,6 +10,14 @@
 
 #include "serial_file.h"
 
+#define URG_4LX_NUM_STEP            769
+#define URG_4LX_START_DEG           (-135)
+#define URG_4LX_START_RAD           ((URG_4LX_START_DEG * M_PI)/180.0)
+#define URG_4LX_DEG_STEP            (270.0/768)
+#define URG_4LX_RAD_STEP            ((URG_4LX_DEG_STEP * M_PI)/180.0)
+#define URG_4LX_START_STEP          44
+#define URG_4LX_END_STEP            625
+
 #define URG_ENABLE_SCIP20           "SCIP2.0\n"
 
 #define URG_SCIP10_NO_ERROR         "0\n"
@@ -67,6 +75,7 @@
 
 class hokuyo_urg : public serial_file {
 public:
+
 
     hokuyo_urg() : serial_file()
     { }
@@ -191,7 +200,11 @@ public:
 
         int i = 0;
         int j = 0;
-        size_t size = ((end - begin) + 1) / cluster;
+        size_t size = ((end - begin) + 1);
+        if(cluster > 1) {
+            size = (int)(ceil((float)size / cluster));
+        }
+
         if(ranges.size() != size)
             ranges.resize(size);
 
@@ -327,7 +340,10 @@ public:
 
         int i = 0;
         int j = 0;
-        size_t size = ((end - begin) + 1) / cluster;
+        size_t size = ((end - begin) + 1);
+        if(cluster != 1) {
+            size = (int)(ceil((float)size / cluster));
+        }
         if(ranges.size() != size)
            ranges.resize(size);
 
@@ -377,7 +393,10 @@ public:
 
         size_t i = 0;
         size_t j = 0;
-        size_t size = ((end - begin) + 1) / cluster;
+        size_t size = ((end - begin) + 1);
+        if(cluster > 1) {
+            size = (int)(ceil((float)size / cluster));
+        }
         if(ranges.size() != size)
            ranges.resize(size);
 

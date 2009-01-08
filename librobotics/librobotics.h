@@ -1897,15 +1897,51 @@ namespace librobotics {
 
     template<typename T1, typename T2>
     void lrf_scan_range_from_scan_point(const std::vector<vec2<T1> >& scan_point,
-                             std::vector<T2>& ranges,
-                             T2 convert = 1.0)
+                                        std::vector<T2>& ranges,
+                                        T2 scale = 1.0)
     {
         if(ranges.size() != scan_point.size()) {
             librobotics::warn("scanPose and ranges size are not match");
         }
 
         for(size_t i = 0; (i < scan_point.size()) && (i < ranges.size()); i++ ) {
-            ranges[i] = (T2)scan_point[i].size() * convert;
+            ranges[i] = (T2)scan_point[i].size() * scale;
+        }
+    }
+
+    template<typename T1, typename T2, typename T3>
+    void lrf_scan_point_from_scan_range(const std::vector<T1>& ranges,
+                                        const std::vector<T2>& cosTable,
+                                        const std::vector<T2>& sinTable,
+                                        std::vector<vec2<T3> >& scan_point,
+                                        int start,
+                                        int end,
+                                        int cluster,
+                                        T3 scale = 1.0,
+                                        bool flip = false)
+    {
+        size_t nPts = ranges.size();
+        if(scan_point.size() != nPts) {
+            scan_point.resize(nPts);
+        }
+
+        if((cosTable.size() <= end) || (sinTable.size() <= end)) {
+            throw librobotics::LibRoboticsRuntimeException("cos/sin table size are not correct");
+        }
+
+        T3 r = 0;;
+        int idx = 0;
+        for(size_t i = 0; i < nPts; i++) {
+            //get angle index
+            idx = start + (i*cluster) + (cluster >> 1);
+            r = ranges[i] * scale;
+            if(flip){
+                scan_point[(nPts - 1) - i].x = r * cosTable[idx];
+                scan_point[(nPts - 1) - i].y = -r * sinTable[idx];
+            } else {
+                scan_point[i].x = r * cosTable[idx];
+                scan_point[i].y = r * sinTable[idx];
+            }
         }
     }
 
@@ -1931,10 +1967,14 @@ namespace librobotics {
         int idx = 0;
         int j = 0;
         for(size_t i = 0; i < nPts; i+=step ) {
-            idx = (!flip) ? i : ((nPts - 1) - i);
             r = ranges[i] * scale;
-            scan_point[j].x = r * cosTable[idx];
-            scan_point[j].y = r * sinTable[idx];
+
+            if(flip) {
+                scan_point[j].x = r * cosTable[idx];
+                scan_point[j].y = -r * sinTable[idx];
+            } else {
+
+            }
             j++;
         }
     }
