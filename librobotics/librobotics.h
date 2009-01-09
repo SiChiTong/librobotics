@@ -928,12 +928,13 @@ namespace librobotics {
      *
      -------------------------------------------------------------------------*/
 
-    template<typename T> bool compare_vec2_angle( const vec2<T>& i, const vec2<T>& j)
+    template<typename T>
+    bool compare_vec2_angle( const vec2<T>& i, const vec2<T>& j)
     {
         double thetai = atan2(i.y, i.x);
-        if(thetai < 0) thetai += (2*M_PI);
+//        if(thetai < 0) thetai += (2*M_PI);
         double thetaj = atan2(j.y, j.x);
-        if(thetaj < 0) thetaj += (2*M_PI);
+//        if(thetaj < 0) thetaj += (2*M_PI);
         return thetai < thetaj;
     }
 
@@ -1995,7 +1996,28 @@ namespace librobotics {
             scan_point[i].rotate(global_pose.a);
             scan_point[i] += global_pose.vec();
         }
+    }
 
+    template<typename T1, typename T2>
+    void lrf_scan_point_to_global_pose(const std::vector<vec2<T1> >& scan_point,
+                                       std::vector<vec2<T1> >& result,
+                                       pose2<T2> lrf_offset,
+                                       pose2<T2> global_pose)
+    {
+        if(scan_point.size() == 0) {
+            librobotics::warn("size of scan_point is 0");
+            return;
+        }
+
+        if(result.size() != scan_point.size())
+            result.resize(scan_point.size());
+
+        for(size_t i = 0; i < scan_point.size(); i++ ) {
+            result[i] = scan_point[i].rot(lrf_offset.a);
+            result[i] += lrf_offset.vec();
+            result[i].rotate(global_pose.a);
+            result[i] += global_pose.vec();
+        }
     }
 
     template<typename T>
