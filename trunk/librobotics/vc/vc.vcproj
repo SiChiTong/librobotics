@@ -41,6 +41,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
+				AdditionalIncludeDirectories="..\"
 				PreprocessorDefinitions="WIN32;_DEBUG;_CONSOLE"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
@@ -60,6 +61,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
+				OutputFile="..\bin\$(ProjectName)d.exe"
 				LinkIncremental="2"
 				GenerateDebugInformation="true"
 				SubSystem="1"
@@ -114,6 +116,7 @@
 				Name="VCCLCompilerTool"
 				Optimization="2"
 				EnableIntrinsicFunctions="true"
+				AdditionalIncludeDirectories="..\"
 				PreprocessorDefinitions="WIN32;NDEBUG;_CONSOLE"
 				RuntimeLibrary="2"
 				EnableFunctionLevelLinking="true"
@@ -132,6 +135,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
+				OutputFile="..\bin\$(ProjectName).exe"
 				LinkIncremental="1"
 				GenerateDebugInformation="true"
 				SubSystem="1"
@@ -171,27 +175,7 @@
 			UniqueIdentifier="{4FC737F1-C7A5-4376-A066-2A32D752A2FF}"
 			>
 			<File
-				RelativePath="..\test\test_localization.cpp"
-				>
-			</File>
-			<File
-				RelativePath="..\test\test_main.cpp"
-				>
-			</File>
-			<File
-				RelativePath="..\test\test_psm.cpp"
-				>
-			</File>
-			<File
-				RelativePath="..\test\test_psm_all.cpp"
-				>
-			</File>
-			<File
-				RelativePath="..\test\test_slam.cpp"
-				>
-			</File>
-			<File
-				RelativePath="..\test\test_vfh.cpp"
+				RelativePath="..\test\test_new.cpp"
 				>
 			</File>
 		</Filter>
@@ -204,6 +188,66 @@
 				RelativePath="..\librobotics.h"
 				>
 			</File>
+			<Filter
+				Name="src"
+				>
+				<File
+					RelativePath="..\src\lb_common.h"
+					>
+				</File>
+				<File
+					RelativePath="..\src\lb_config_file.h"
+					>
+				</File>
+				<File
+					RelativePath="..\src\lb_data_type.h"
+					>
+				</File>
+				<File
+					RelativePath="..\src\lb_exception.h"
+					>
+				</File>
+				<File
+					RelativePath="..\src\lb_log_file.h"
+					>
+				</File>
+				<File
+					RelativePath="..\src\lb_macro_function.h"
+					>
+				</File>
+				<File
+					RelativePath="..\src\lb_map2.h"
+					>
+				</File>
+				<File
+					RelativePath="..\src\lb_map2_grid.h"
+					>
+				</File>
+				<File
+					RelativePath="..\src\lb_option.h"
+					>
+				</File>
+				<File
+					RelativePath="..\src\lb_pose2.h"
+					>
+				</File>
+				<File
+					RelativePath="..\src\lb_statistic_function.h"
+					>
+				</File>
+				<File
+					RelativePath="..\src\lb_template_function.h"
+					>
+				</File>
+				<File
+					RelativePath="..\src\lb_tools.h"
+					>
+				</File>
+				<File
+					RelativePath="..\src\lb_vec2.h"
+					>
+				</File>
+			</Filter>
 		</Filter>
 		<Filter
 			Name="Resource Files"

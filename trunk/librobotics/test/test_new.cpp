@@ -15,8 +15,8 @@ int main(int argc, char* argv[]) {
     grid2_data grid2dat;
 
 
-    grid2dat.load_config("../test_data/grid2_cfg.txt");
-    grid2dat.load_map_image("../test_data/003_01.png");
+    grid2dat.load_config("../test_data/grid2_cfg_save.txt");
+    grid2dat.load_map_txt("../test_data/grid2_map_save.txt");
     grid2dat.show_information();
 //    vec2f pts;
 //    vec2i coor;
@@ -28,10 +28,10 @@ int main(int argc, char* argv[]) {
 //            LB_PRINT_VAR(coor);
 //        }
 
-    grid2dat.save_config("../test_data/grid2_cfg_save.txt");
-    grid2dat.save_map_txt("../test_data/grid2_map_save.txt");
+    //grid2dat.save_config("../test_data/grid2_cfg_save.txt");
+    //grid2dat.save_map_txt("../test_data/grid2_map_save.txt");
 
-    cimg8u map = grid2dat.get_image(0, 0, 1);
+    cimg8u map = grid2dat.get_image(1, 0, 0);
 
     cimg_library::CImgDisplay disp(map.dimx(), map.dimy(), "Hello", 0);
     map.display(disp);
