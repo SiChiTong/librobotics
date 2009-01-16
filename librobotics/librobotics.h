@@ -35,12 +35,17 @@
 #define librobotics_version 0.1
 
 #include "src/lb_common.h"
+#include "src/lb_simple_gui.h"
+#include "src/lb_cimg_draw.h"
 #include "src/lb_macro_function.h"
-#include "src/lb_template_function.h"
+#include "src/lb_misc_function.h"
 #include "src/lb_tools.h"
+#include "src/lb_log_file.h"
 #include "src/lb_statistic_function.h"
 #include "src/lb_data_type.h"
 #include "src/lb_map2.h"
+#include "src/lb_lrf_basic.h"
+
 
 //
 //        void reset_dyn_map() {
@@ -259,165 +264,7 @@
 //        }
 //
 //
-//
-//        /**
-//         * Load map data from text file.
-//         * Example of map with 3x3 size (do not put \\\\ comment inside the file) \n
-//         *      3 3             \\\\size \n
-//         *      0.0 0.0 0.0     \\\\offset \n
-//         *      0.0 0.0         \\\\center \n
-//         *      1.0             \\\\scale \n
-//         *      0.1 0.2 0.3     \\\\grid value of (x, 0) \n
-//         *      0.4 0.5 0.6     \\\\grid value of (x, 1) \n
-//         *      0.7 0.8 0.8     \\\\grid value of (x, 2) \n
-//         * @param filename of the map data
-//         */
-//        void load_txt(const std::string& filename) {
-//            std::ifstream file;
-//            open_file_with_exception(file, filename);
-//            file >> mapsize;
-//            file >> offset;
-//            file >> center;
-//            file >> resolution;
-//            if(resolution <= 0) {
-//                warn("resolution must > 0 -> automatic set to 1.0");
-//                resolution = 1.0;
-//            }
-//            center /= resolution;
-//            mapprob.resize(mapsize.x);
-//            gradient_map.resize(mapsize.x);
-//            gradient_intr.resize(mapsize.x);
-//            for(int i = 0; i < mapsize.x && !file.eof(); i++) {
-//                mapprob[i].resize(mapsize.y);
-//                gradient_map[i].resize(mapsize.y);
-//                gradient_intr[i].resize(mapsize.y);
-//                for(int j = 0; j < mapsize.y && !file.eof(); j++) {
-//                    file >> mapprob[i][j];
-//                }
-//            }
-//
-//            //copy map
-//            dyn_mapprob = mapprob;
-//        }
-//
-//        /**
-//         * Save map data to text file.
-//         * @param filename of the output map
-//         */
-//        void save_txt(const std::string& filename) {
-//            std::ofstream file;
-//            open_file_with_exception(file, filename);
-//            file << mapsize << "\n";
-//            file << offset << "\n";
-//            file << (center*resolution) << "\n";
-//            file << resolution << "\n";
-//            for(int i = 0; i < mapsize.x && !file.eof(); i++) {
-//                for(int j = 0; j < mapsize.y && !file.eof(); j++) {
-//                    file << mapprob[i][j] << " ";
-//                }
-//                file << "\n";
-//            }
-//            file.close();
-//        }
-//
-//
-//
-//#ifdef librobotics_use_cimg
-//        /**
-//         * Load map data from image file. Image data should save in 8 bit color depth format.
-//         * This function will use only first channel as map data.
-//         * Map data will read directly for each pixel position to grid position.
-//         * @param filename of the map image
-//         * @param _offset map offset in real world unit (m, mm, cm...)
-//         * @param _center map center in real world unit (m, mm, cm...)
-//         * @param _resolution map resolution in real world unit (m, mm, cm...)
-//         */
-//        void load_image(const std::string& filename,
-//                        const pose2<T>& _offset,
-//                        const vec2<T>& _center,
-//                        T _resolution)
-//        {
-//            using namespace cimg_library;
-//            CImg<unsigned char> img;
-//            try {
-//                img.load(filename.c_str());
-//            } catch (CImgException& e) {
-//                throw LibRoboticsIOException(e.message);
-//            }
-//
-//
-//            mapsize.x = img.dimx();
-//            mapsize.y = img.dimy();
-//            offset = offset;
-//            center = _center;
-//            resolution = _resolution;
-//            if(resolution <= 0) {
-//                warn("resolution must > 0 -> automatic set to 1.0");
-//                resolution = 1.0;
-//            }
-//            center /= resolution;
-//            mapprob.resize(mapsize.x);
-//            gradient_map.resize(mapsize.x);
-//            gradient_intr.resize(mapsize.x);
-//            for(int i = 0; i < mapsize.x; i++) {
-//                mapprob[i].resize(mapsize.y);
-//                gradient_map[i].resize(mapsize.y);
-//                gradient_intr[i].resize(mapsize.y);
-//                for(int j = 0; j < mapsize.y; j++) {
-//                    mapprob[i][j] = (255 - img(i, j, 0)) / 255.0;
-//                    //if(mapprob[i][j] < 0.5) mapprob[i][j] = 0.0;
-//                }
-//            }
-//
-//            std::cout << "======= Map Setting =======\n";
-//            PRINTVAR(filename);
-//            PRINTVAR(mapsize);
-//            PRINTVAR(offset);
-//            PRINTVAR(center);
-//            PRINTVAR(resolution);
-//            std::cout << "===========================\n";
-//
-//            //copy map
-//            dyn_mapprob = mapprob;
-//
-//        }
-//
-//        /**
-//         * Get image of the map
-//         * @param flip_x true to flip result image along X-axis
-//         * @param flip_y true to flip result image along Y-axis
-//         * @return image in CImg<unsigned char> format.
-//         */
-//        cimg_library::CImg<unsigned char>
-//        get_image(bool flip_x = false, bool flip_y = true) {
-//            using namespace cimg_library;
-//            CImg<unsigned char> img(mapsize.x, mapsize.y, 1, 3, 0);
-//            unsigned char v = 0;
-//            int x, y;
-//            for(int i = 0; i < mapsize.x; i++) {
-//                for(int j = 0; j < mapsize.y; j++) {
-//                    v = (unsigned char)(255 - (mapprob[i][j] * 255));
-//                    x = i;
-//                    y = j;
-//
-//                    if(flip_x) x = (mapsize.x - 1) - x;
-//                    if(flip_y) y = (mapsize.y - 1) - y;
-//
-//                    img(x, y, 0) = v;
-//                    img(x, y, 1) = v;
-//                    img(x, y, 2) = v;
-//                }
-//            }
-//            return img;
-//        }
-//
-//#endif
-//    };
-//
-//    typedef map_grid2<float> map_grid2f;
-//    typedef map_grid2<double> map_grid2d;
-//
-//
+
 //
 //    /*-------------------------------------------------------------------------
 //     *

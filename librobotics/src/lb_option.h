@@ -30,7 +30,7 @@
 #ifndef LB_OPTION_H_
 #define LB_OPTION_H_
 
-typedef double  LB_FLOAT;
+typedef float  LB_FLOAT;
 
 #define LB_PRINT_STREAM    std::cerr
 
