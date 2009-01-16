@@ -30,25 +30,88 @@
 #ifndef LB_LOG_FILE_H_
 #define LB_LOG_FILE_H_
 
-///** \defgroup g_lib_marco Helper macros for the library */
-///* @{ */
-//
-//
-////open file
-//#define open_file_with_exception(f, n) \
-//    f.open(n.c_str()); \
-//    if(!f.is_open()) { \
-//        throw LibRoboticsIOException("Cannot open: %s", n.c_str()); \
-//    }
-//
-////load configuration from text file
-//#define load_cfg_from_text_file(x, f)   \
-//    f >> x; \
-//    PRINTVAR(x); \
-//    getline(f,tmp);
-//
-//
-//
-///* @} */
+#include "lb_common.h"
+
+namespace librobotics {
+struct log_file {
+    std::fstream file;
+    int step;
+    std::vector<std::string> labels;
+    std::string tmp;
+    size_t count;
+    size_t idx;
+
+    log_file() :
+        step(0), count(0), idx(0)
+    {
+        tmp.reserve(4096);
+    }
+
+    virtual ~log_file() {
+        close();
+    }
+
+    bool open(const std::string& filename) {
+        file.open(filename.c_str());
+        return file.is_open();
+    }
+
+    void close() {
+        file.close();
+    }
+
+
+    virtual bool real_one_step() = 0;
+
+};
+
+struct simple_lrf_log : public log_file {
+    std::vector<int> ranges;
+
+    simple_lrf_log(const std::string& label)
+        : log_file()
+    {
+        labels.push_back(label);
+    }
+
+    virtual bool real_one_step( ) {
+        file >> tmp;
+
+        if(file.eof()) {
+            return false;
+        }
+
+        if(tmp.compare(labels[0]) == 0) {
+            file >> count;
+            idx = 0;
+            if(ranges.size() < count) ranges.resize(count);
+            while(!file.eof() && (idx < count)) {
+                file >> ranges[idx++];
+            }
+
+            if(idx != count) {
+                return false;
+            }
+            step++;
+        } else {
+            //ignore whole line
+            file.ignore(std::numeric_limits<int>::max(), '\n');
+            return false;
+        }
+        return true;
+    }
+
+    int real_all(std::vector<std::vector<int> >& ranges_all) {
+        while(!file.eof()) {
+            if(real_one_step())
+                ranges_all.push_back(ranges);
+        }
+        return step;
+    }
+
+};
+
+
+}
 
 #endif /* LB_LOG_FILE_H_ */

@@ -32,6 +32,7 @@
 
 #include "lb_common.h"
 #include "lb_macro_function.h"
+#include "lb_tools.h"
 
 namespace librobotics {
     /**
@@ -137,8 +138,8 @@ namespace librobotics {
         r = sqrt(lb_rand());
     }
 
-    template<typename T>
-    void lb_stratified_random(std::vector<T>& v, size_t n) {
+
+    inline void lb_stratified_random(std::vector<LB_FLOAT>& v, size_t n) {
         LB_FLOAT k = 1.0/n;
         LB_FLOAT k_2 = k * 0.5;
         if(v.size() != n) v.resize(n);

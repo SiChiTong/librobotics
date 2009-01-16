@@ -31,6 +31,7 @@
 #define LB_VEC2_H_
 
 #include "lb_common.h"
+#include "lb_macro_function.h"
 
 namespace librobotics {
 
@@ -145,7 +146,7 @@ namespace librobotics {
         }
 
         ///Get square size
-        T sqrSize() const {
+        T sqr_size() const {
             return (T) (x * x + y * y);
         }
 
@@ -185,13 +186,6 @@ namespace librobotics {
                 return vec2((*this) / size());
             }
         }
-        vec2 norm() const {
-            if (is_zero()) {
-                return vec2();
-            } else {
-                return vec2((*this) / size());
-            }
-        }
 
         ///Normalize the vector
         vec2& normalize() {
@@ -209,21 +203,11 @@ namespace librobotics {
          * \param angle rotate angle
          * \param angle unit select (true for radian, false for degree)
          */
-        template<typename T1>
-        vec2 get_rotate(T1 angle, bool rad = true) const {
+        vec2 get_rotate(T angle, bool rad = true) const {
             if (!rad)
                 angle = LB_DEG2RAD(angle);
-            T1 c = cos(angle);
-            T1 s = sin(angle);
-            return vec2((T) (x * c - y * s), (T) (x * s + y * c));
-        }
-
-        template<typename T1>
-        vec2 rot(T1 angle, bool rad = true) const {
-            if (!rad)
-                angle = LB_DEG2RAD(angle);
-            T1 c = cos(angle);
-            T1 s = sin(angle);
+            T c = cos(angle);
+            T s = sin(angle);
             return vec2((T) (x * c - y * s), (T) (x * s + y * c));
         }
 
@@ -232,11 +216,12 @@ namespace librobotics {
          * \param angle rotate angle
          * \param angle unit select (true for radian, false for degree)
          */
-        template<typename T1>
-        vec2& rotate(T1 angle, bool rad = true) {
-            vec2<T> tmp = this->rot(angle, rad);
-            x = tmp.x;
-            y = tmp.y;
+        vec2& rotate(T angle, bool rad = true) {
+            T c = cos(angle);
+            T s = sin(angle);
+            T tmpx = (x * c - y * s);
+            y = (x * s + y * c);
+            x = tmpx;
             return *this;
         }
 

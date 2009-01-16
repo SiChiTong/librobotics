@@ -3,6 +3,28 @@
  *
  *  Created on: Jan 15, 2009
  *      Author: mahisorn
+ *
+ *  Copyright (c) <2009> <Mahisorn Wongphati>
+ *  Permission is hereby granted, free of charge, to any person
+ *  obtaining a copy of this software and associated documentation
+ *  files (the "Software"), to deal in the Software without
+ *  restriction, including without limitation the rights to use,
+ *  copy, modify, merge, publish, distribute, sublicense, and/or sell
+ *  copies of the Software, and to permit persons to whom the
+ *  Software is furnished to do so, subject to the following
+ *  conditions:
+ *
+ *  The above copyright notice and this permission notice shall be
+ *  included in all copies or substantial portions of the Software.
+ *
+ *  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ *  EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+ *  OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+ *  NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+ *  HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+ *  WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ *  FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+ *  OTHER DEALINGS IN THE SOFTWARE.
  */
 
 #ifndef LB_MAP2_GRID_H_
@@ -11,6 +33,7 @@
 #include "lb_common.h"
 #include "lb_exception.h"
 #include "lb_data_type.h"
+#include "lb_statistic_function.h"
 
 namespace librobotics {
 
@@ -226,6 +249,45 @@ namespace librobotics {
             LB_PRINT_STREAM << "done! with " << cnt << " ray casting operations\n";
         }
 
+        inline bool get_gradient_path(const vec2f& start,
+                                     const vec2f& goal,
+                                     std::vector<vec2i>& path,
+                                     LB_FLOAT clearance)
+        {
+            vec2i grid_start;
+            vec2i grid_goal;
+
+            //check start point
+            if(get_grid_coordinate(start.x, start.y, grid_start)) {
+                if(dyn_mapprob[grid_start.x][grid_start.y] > 0.0) {
+                    std::cerr << "start position is inside the obstacle\n";
+                    return false;
+                }
+            } else {
+                LB_PRINT_STREAM << "start position is outside the map\n";
+                return false;
+            }
+
+            //check goal point
+            if(get_grid_coordinate(goal.x, goal.y, grid_goal)) {
+                if(dyn_mapprob[grid_goal.x][grid_goal.y] > 0) {
+                    LB_PRINT_STREAM << "goal position is inside the obstacle\n";
+                    return false;
+                }
+            } else {
+                LB_PRINT_STREAM << "goal position is outside the map\n";
+                return false;
+            }
+
+            LB_PRINT_STREAM << "Move from: " << start << " (" << grid_start
+                            <<  ") to: " << goal << "  (" << grid_goal << ")\n";
+
+
+
+            return true;
+        }
+
+
         inline void load_config(const std::string& filename) {
             std::ifstream file;
             file.open(filename.c_str());
@@ -367,7 +429,7 @@ namespace librobotics {
          * @param _center map center in real world unit (m, mm, cm...)
          * @param _resolution map resolution in real world unit (m, mm, cm...)
          */
-        void load_map_image(const std::string& filename) {
+        inline void load_map_image(const std::string& filename) {
             using namespace cimg_library;
             cimg8u img;
 
@@ -395,7 +457,7 @@ namespace librobotics {
          * @param flip_y true to flip result image along Y-axis
          * @return image in CImg<unsigned char> format.
          */
-        cimg8u get_image(bool flip_x = false,
+        inline cimg8u get_image(bool flip_x = false,
                          bool flip_y = true,
                          bool invert = true)
         {

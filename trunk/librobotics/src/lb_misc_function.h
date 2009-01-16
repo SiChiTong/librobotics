@@ -1,5 +1,5 @@
 /*
- * lb_template_function.h
+ * lb_misc_function.h
  *
  *  Created on: Jan 15, 2009
  *      Author: mahisorn
@@ -27,20 +27,60 @@
  *  OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef LB_TEMPLATE_FUNCTION_H_
-#define LB_TEMPLATE_FUNCTION_H_
+#ifndef LB_MISC_FUNCTION_H_
+#define LB_MISC_FUNCTION_H_
 
 #include "lb_common.h"
+#include "lb_data_type.h"
+
+namespace librobotics {
 
 /** \defgroup g_user_template User-friendly template functions */
 /* @{ */
+
+
+
+inline void build_angle_table(LB_FLOAT start, LB_FLOAT end, int step, std::vector<LB_FLOAT>& table) {
+    if(table.size() != (size_t)step) table.resize(step);
+    LB_FLOAT angle_step = (end - start) / step;
+    for(int i = 0; i < step; i++) {
+        table[i] = start + (i * angle_step);
+    }
+}
+
+inline void build_cos_sin_table(LB_FLOAT start, LB_FLOAT end, int step,
+                                std::vector<LB_FLOAT>& cos_table,
+                                std::vector<LB_FLOAT>& sin_table)
+{
+    if(cos_table.size() != (size_t)step) cos_table.resize(step);
+    if(sin_table.size() != (size_t)step) sin_table.resize(step);
+    LB_FLOAT angle_step = (end - start) / step;
+    for(int i = 0; i < step; i++) {
+        cos_table[i] = cos(start + (i * angle_step));
+        sin_table[i] = sin(start + (i * angle_step));
+    }
+}
+
+inline void build_cos_sin_table(const std::vector<LB_FLOAT>& angle_table,
+                                std::vector<LB_FLOAT>& cos_table,
+                                std::vector<LB_FLOAT>& sin_table)
+{
+    int step = angle_table.size();
+    if(cos_table.size() != (size_t)step) cos_table.resize(step);
+    if(sin_table.size() != (size_t)step) sin_table.resize(step);
+    for(int i = 0; i < step; i++) {
+        cos_table[i] = cos(angle_table[i]);
+        sin_table[i] = sin(angle_table[i]);
+    }
+}
+
 /**
  * Normalize the angle to \f$(-\pi, \pi)\f$ radian unit
  * \param a input angle value
  * \return normalized angle
  */
-template<typename T>
-inline T normalize_angle(T a) {
+
+inline LB_FLOAT normalize_angle(LB_FLOAT a) {
     int m = (int)(a / (2.0*M_PI));
     a = a - (m * M_PI * 2.0);
     if (a < (-M_PI))
@@ -56,12 +96,12 @@ inline T normalize_angle(T a) {
  * \param b input angle value
  * \return minimum angle distance from a -> b
  */
-template<typename T>
-inline T minimum_angle_distance(T a, T b) {
+
+inline LB_FLOAT minimum_angle_distance(LB_FLOAT a, LB_FLOAT b) {
     a = normalize_angle(a);
     b = normalize_angle(b);
 
-    T diff = b - a;
+    LB_FLOAT diff = b - a;
 
     if(fabs(diff) > M_PI) {
         if(diff < 0)
@@ -77,8 +117,8 @@ inline T minimum_angle_distance(T a, T b) {
  * @param v number vector
  * @param sum output vector
  */
-template<typename T>
-inline void cumulative_sum(const std::vector<T>& v, std::vector<T>& sum) {
+
+inline void cumulative_sum(const std::vector<LB_FLOAT>& v, std::vector<LB_FLOAT>& sum) {
     if(v.size() == 0) return;
     if(sum.size() != v.size()) sum.resize(v.size());
     sum[0] = v[0];
@@ -92,9 +132,8 @@ inline void cumulative_sum(const std::vector<T>& v, std::vector<T>& sum) {
  * @param v input
  * @return square sum of all value in v
  */
-template<typename T>
-inline T square_sum(const std::vector<T>& v) {
-    T sum = 0;
+inline LB_FLOAT square_sum(const std::vector<LB_FLOAT>& v) {
+    LB_FLOAT sum = 0;
     for(size_t i = 0; i < v.size(); i++) {
         sum += LB_SQR(v[i]);
     }
@@ -103,5 +142,7 @@ inline T square_sum(const std::vector<T>& v) {
 
 /* @} */
 
+}
 
-#endif /* LB_TEMPLATE_FUNCTION_H_ */
+
+#endif /* LB_MISC_FUNCTION_H_ */

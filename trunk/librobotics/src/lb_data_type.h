@@ -28,6 +28,13 @@ namespace librobotics {
     typedef bbox2<int> bbox2i;
     typedef bbox2<LB_FLOAT> bbox2f;
 
+    //range measurement
+    struct range_data {
+        std::vector<int> range;
+        std::vector<LB_FLOAT> angle;
+        std::vector<vec2f> point;
+    };
+
 
 
 }
