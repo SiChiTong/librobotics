@@ -175,7 +175,7 @@ namespace librobotics {
 
         ///Check for zero size vector
         bool is_zero() const {
-            return (this->size() <= LB_IS_ZERO);
+            return ((x == 0) && (y == 0));
         }
 
         ///Get normalized vector

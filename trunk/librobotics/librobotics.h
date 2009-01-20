@@ -48,6 +48,7 @@
 #include "src/lb_lrf_basic.h"
 #include "src/lb_lrf_object_detect.h"
 #include "src/lb_math_model.h"
+#include "src/lb_kalman_tracker.h"
 
 
 //

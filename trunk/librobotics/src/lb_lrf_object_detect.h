@@ -17,12 +17,12 @@
 namespace librobotics {
 
 
-inline int lrf_recusive_line_fitting(const std::vector<vec2f>& points,
-                                     std::vector<lrf_object>& objects,
-                                     LB_FLOAT min_length,
-                                     LB_FLOAT err_threshold,
-                                     int id = -1,
-                                     size_t min_point = 4)
+inline int lb_lrf_recusive_line_fitting(const std::vector<vec2f>& points,
+                                        std::vector<lrf_object>& objects,
+                                        const LB_FLOAT min_length,
+                                        const LB_FLOAT err_threshold,
+                                        const int id = -1,
+                                        const size_t min_point = 4)
 {
     size_t n = points.size();
 
@@ -90,11 +90,11 @@ inline int lrf_recusive_line_fitting(const std::vector<vec2f>& points,
             for(size_t i = 0; i < n_break; i++) {
                 first_beam.push_back(points[i]);
             }
-            int line1 = lrf_recusive_line_fitting(first_beam,
-                                                  objects,
-                                                  min_length,
-                                                  err_threshold,
-                                                  min_point);
+            int line1 = lb_lrf_recusive_line_fitting(first_beam,
+                                                     objects,
+                                                     min_length,
+                                                     err_threshold,
+                                                     min_point);
 
             //Second half
             std::vector<vec2f> second_beam;
@@ -102,11 +102,11 @@ inline int lrf_recusive_line_fitting(const std::vector<vec2f>& points,
                 second_beam.push_back(points[i]);
             }
 
-            int line2 = lrf_recusive_line_fitting(second_beam,
-                                                  objects,
-                                                  min_length,
-                                                  err_threshold,
-                                                  min_point);
+            int line2 = lb_lrf_recusive_line_fitting(second_beam,
+                                                     objects,
+                                                     min_length,
+                                                     err_threshold,
+                                                     min_point);
             return line1 + line2;
         }//if
     }//if
@@ -115,17 +115,17 @@ inline int lrf_recusive_line_fitting(const std::vector<vec2f>& points,
 }
 
 
-inline bool lrf_arc_fiting(const std::vector<vec2f>& points,
-                           std::vector<lrf_object>& objects,
-                           LB_FLOAT min_aparture,
-                           LB_FLOAT max_aparture,
-                           LB_FLOAT max_stdev,
-                           LB_FLOAT arc_ratio,
-                           LB_FLOAT is_line_error,
-                           LB_FLOAT is_line_stdev,
-                           int id = -1,
-                           bool check_corner = true,
-                           size_t min_point = 10)
+inline bool lb_lrf_arc_fiting(const std::vector<vec2f>& points,
+                              std::vector<lrf_object>& objects,
+                              const LB_FLOAT min_aparture,
+                              const LB_FLOAT max_aparture,
+                              const LB_FLOAT max_stdev,
+                              const LB_FLOAT arc_ratio,
+                              const LB_FLOAT is_line_error,
+                              const LB_FLOAT is_line_stdev,
+                              const int id = -1,
+                              const bool check_corner = true,
+                              const size_t min_point = 20)
 {
     size_t n = points.size();
     if(n < min_point) {
@@ -137,26 +137,25 @@ inline bool lrf_arc_fiting(const std::vector<vec2f>& points,
     vec2f left = points[n - 1];
     vec2f center = (right + left) * 0.5;
 
-    LB_PRINT_VAR(left);
-    LB_PRINT_VAR(middle);
-    LB_PRINT_VAR(right);
+//    LB_PRINT_VAR(left);
+//    LB_PRINT_VAR(middle);
+//    LB_PRINT_VAR(right);
 
     LB_FLOAT dist_lr = (left - right).size();
     LB_FLOAT dist_mc = (middle - center).size();
 
-    LB_PRINT_VAR(dist_lr);
-    LB_PRINT_VAR(dist_mc);
-    LB_PRINT_VAR(dist_mc/dist_lr);
-
+//    LB_PRINT_VAR(dist_lr);
+//    LB_PRINT_VAR(dist_mc);
+//    LB_PRINT_VAR(dist_mc/dist_lr);
 
     bool check_ratio = dist_mc > (arc_ratio * dist_lr);
     bool check_size = dist_mc < dist_lr;
 
-    LB_PRINT_VAR(check_ratio);
-    LB_PRINT_VAR(check_size);
+//    LB_PRINT_VAR(check_ratio);
+//    LB_PRINT_VAR(check_size);
 
     if(!(check_ratio && check_size)) {
-        std::cout << "Not an arc" << std::endl;
+//        std::cout << "Not an arc" << std::endl;
         return false;
     }
 
@@ -171,52 +170,51 @@ inline bool lrf_arc_fiting(const std::vector<vec2f>& points,
         xy_temp = points[i+1];
         ma = (left - xy_temp).theta();
         mb = (right - xy_temp).theta();
-        slopes[i] = ma - mb;
+        slopes[i] = fabs(lb_normalize_angle(ma - mb));
     }
 
-
-    if(check_corner) {
-        LB_FLOAT min = std::numeric_limits<LB_FLOAT>::max();
-        int min_idx = 0;
-        // if is a corner exclude it
-        if (slopes_size > 4) {
-            //min slope
-            for (size_t temp = 0;temp < slopes_size; temp++) {
-                if (slopes[temp] < min) {
-                    min = slopes[temp];
-                    min_idx = temp;
-                }
-            }
-
-
-            if (((slopes_size - min_idx) > 1) && (min_idx > 1)) {
-                if (slopes[min_idx - 2] > slopes[min_idx - 1] &&
-                    slopes[min_idx - 1] > slopes[min_idx + 0] &&
-                    slopes[min_idx + 1] > slopes[min_idx + 0] &&
-                    slopes[min_idx + 2] > slopes[min_idx + 1])
-                {
-                    std::cout << "Is a corner" << std::endl;
-                    return false;// is a corner
-                }
-            }
-        }
-    }
-
+//    LB_PRINT_VEC(slopes);
     LB_FLOAT average = lb_mean(slopes);
     LB_FLOAT std_dev = lb_stdev(slopes, average);
 
-//      PRINT_VAR(average);
-//      PRINT_VAR(std_dev);
+//    LB_PRINT_VAR(average);
+//    LB_PRINT_VAR(std_dev);
 
 
+//    if(check_corner) {
+//        LB_FLOAT min = std::numeric_limits<LB_FLOAT>::max();
+//        int min_idx = 0;
+//        // if is a corner exclude it
+//        if (slopes_size > 4) {
+//            //min slope
+//            for (size_t temp = 0;temp < slopes_size; temp++) {
+//                if (slopes[temp] < min) {
+//                    min = slopes[temp];
+//                    min_idx = temp;
+//                }
+//            }
+//
+//
+//            if (((slopes_size - min_idx) > 1) && (min_idx > 1)) {
+//                if (slopes[min_idx - 2] > slopes[min_idx - 1] &&
+//                    slopes[min_idx - 1] > slopes[min_idx + 0] &&
+//                    slopes[min_idx + 1] > slopes[min_idx + 0] &&
+//                    slopes[min_idx + 2] > slopes[min_idx + 1])
+//                {
+//                    std::cout << "Is a corner" << std::endl;
+//                    return false;// is a corner
+//                }
+//            }
+//        }
+//    }
 
     //check if is line
     if ((fabs(average - M_PI) < is_line_error) && (std_dev < is_line_stdev)) {
-        std::cout << "Is a line" << std::endl;
+//        std::cout << "Is a line" << std::endl;
         return false;// is a line
     }
 
-    LB_PRINT_VAR(std_dev);
+//    LB_PRINT_VAR(std_dev);
 
     //check arc
     if (std_dev < max_stdev) {
@@ -235,14 +233,9 @@ inline bool lrf_arc_fiting(const std::vector<vec2f>& points,
             average = (2 * M_PI) + average;
         }
 
-        LB_PRINT_VAR(average);
-
         if((average > min_aparture) && (average < max_aparture)) {
-//              PRINT_VAR(center);
-//              PRINT_VAR(radius);
-//              PRINT_VAR(average);
-//              PRINT_VAR(std_dev);
-
+//            LB_PRINT_VAR(center);
+//            LB_PRINT_VAR(radius);
             lrf_object arc;
             arc.points = points;
             arc.type = LRF_OBJ_ARC;

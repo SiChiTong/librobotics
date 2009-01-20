@@ -40,7 +40,11 @@ namespace librobotics {
 
 
 
-inline void build_angle_table(LB_FLOAT start, LB_FLOAT end, int step, std::vector<LB_FLOAT>& table) {
+inline void lb_build_angle_table(LB_FLOAT start,
+                                 LB_FLOAT end,
+                                 int step,
+                                 std::vector<LB_FLOAT>& table)
+{
     if(table.size() != (size_t)step) table.resize(step);
     LB_FLOAT angle_step = (end - start) / step;
     for(int i = 0; i < step; i++) {
@@ -48,9 +52,9 @@ inline void build_angle_table(LB_FLOAT start, LB_FLOAT end, int step, std::vecto
     }
 }
 
-inline void build_cos_sin_table(LB_FLOAT start, LB_FLOAT end, int step,
-                                std::vector<LB_FLOAT>& cos_table,
-                                std::vector<LB_FLOAT>& sin_table)
+inline void lb_build_cos_sin_table(LB_FLOAT start, LB_FLOAT end, int step,
+                                   std::vector<LB_FLOAT>& cos_table,
+                                   std::vector<LB_FLOAT>& sin_table)
 {
     if(cos_table.size() != (size_t)step) cos_table.resize(step);
     if(sin_table.size() != (size_t)step) sin_table.resize(step);
@@ -61,9 +65,9 @@ inline void build_cos_sin_table(LB_FLOAT start, LB_FLOAT end, int step,
     }
 }
 
-inline void build_cos_sin_table(const std::vector<LB_FLOAT>& angle_table,
-                                std::vector<LB_FLOAT>& cos_table,
-                                std::vector<LB_FLOAT>& sin_table)
+inline void lb_build_cos_sin_table(const std::vector<LB_FLOAT>& angle_table,
+                                   std::vector<LB_FLOAT>& cos_table,
+                                   std::vector<LB_FLOAT>& sin_table)
 {
     int step = angle_table.size();
     if(cos_table.size() != (size_t)step) cos_table.resize(step);
@@ -80,7 +84,7 @@ inline void build_cos_sin_table(const std::vector<LB_FLOAT>& angle_table,
  * \return normalized angle
  */
 
-inline LB_FLOAT normalize_angle(LB_FLOAT a) {
+inline LB_FLOAT lb_normalize_angle(LB_FLOAT a) {
     int m = (int)(a / (2.0*M_PI));
     a = a - (m * M_PI * 2.0);
     if (a < (-M_PI))
@@ -97,9 +101,9 @@ inline LB_FLOAT normalize_angle(LB_FLOAT a) {
  * \return minimum angle distance from a -> b
  */
 
-inline LB_FLOAT minimum_angle_distance(LB_FLOAT a, LB_FLOAT b) {
-    a = normalize_angle(a);
-    b = normalize_angle(b);
+inline LB_FLOAT lb_minimum_angle_distance(LB_FLOAT a, LB_FLOAT b) {
+    a = lb_normalize_angle(a);
+    b = lb_normalize_angle(b);
 
     LB_FLOAT diff = b - a;
 

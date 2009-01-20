@@ -77,16 +77,16 @@ namespace librobotics {
 
 #if (librobotics_use_cimg == 1)
 
-inline void draw_points_cimg(cimg8u& img,
-                             const std::vector<vec2f>& points,
-                             const unsigned char color[],
-                             LB_FLOAT scale = 1.0,
-                             LB_FLOAT angle = 0.0,
-                             int x_offset = -1,
-                             int y_offset = -1,
-                             bool line = false,
-                             bool flip_x = false,
-                             bool flip_y = true)
+inline void lb_draw_points_cimg(cimg8u& img,
+                                const std::vector<vec2f>& points,
+                                const unsigned char color[],
+                                LB_FLOAT scale = 1.0,
+                                LB_FLOAT angle = 0.0,
+                                int x_offset = -1,
+                                int y_offset = -1,
+                                bool line = false,
+                                bool flip_x = false,
+                                bool flip_y = true)
 {
     using namespace cimg_library;
 
@@ -113,15 +113,15 @@ inline void draw_points_cimg(cimg8u& img,
 }
 
 
-inline void draw_lrf_line_object_cimg(cimg8u& img,
-                                      const lrf_object& line,
-                                      const unsigned char color[],
-                                      LB_FLOAT scale = 1.0,
-                                      LB_FLOAT angle = 0.0,
-                                      int x_offset = -1,
-                                      int y_offset = -1,
-                                      bool flip_x = false,
-                                      bool flip_y = true)
+inline void lb_draw_lrf_line_object_cimg(cimg8u& img,
+                                         const lrf_object& line,
+                                         const unsigned char color[],
+                                         LB_FLOAT scale = 1.0,
+                                         LB_FLOAT angle = 0.0,
+                                         int x_offset = -1,
+                                         int y_offset = -1,
+                                         bool flip_x = false,
+                                         bool flip_y = true)
 {
     using namespace cimg_library;
 
@@ -151,15 +151,15 @@ inline void draw_lrf_line_object_cimg(cimg8u& img,
     img.draw_line(l0.x, l0.y, l1.x, l1.y, color, 1.0);
 }
 
-inline void draw_lrf_arc_object_cimg(cimg8u& img,
-                                     const lrf_object& arc,
-                                     const unsigned char color[],
-                                     LB_FLOAT scale = 1.0,
-                                     LB_FLOAT angle = 0.0,
-                                     int x_offset = -1,
-                                     int y_offset = -1,
-                                     bool flip_x = false,
-                                     bool flip_y = true)
+inline void lb_draw_lrf_arc_object_cimg(cimg8u& img,
+                                        const lrf_object& arc,
+                                        const unsigned char color[],
+                                        LB_FLOAT scale = 1.0,
+                                        LB_FLOAT angle = 0.0,
+                                        int x_offset = -1,
+                                        int y_offset = -1,
+                                        bool flip_x = false,
+                                        bool flip_y = true)
 {
     using namespace cimg_library;
 
