@@ -112,33 +112,9 @@ inline LB_FLOAT minimum_angle_distance(LB_FLOAT a, LB_FLOAT b) {
     return diff;
 }
 
-/**
- * Compute a cumulative summation.
- * @param v number vector
- * @param sum output vector
- */
 
-inline void cumulative_sum(const std::vector<LB_FLOAT>& v, std::vector<LB_FLOAT>& sum) {
-    if(v.size() == 0) return;
-    if(sum.size() != v.size()) sum.resize(v.size());
-    sum[0] = v[0];
-    for(size_t i = 1; i < v.size(); i++) {
-        sum[i] = sum[i-1] + v[i];
-    }
-}
 
-/**
- * Compute a square summation
- * @param v input
- * @return square sum of all value in v
- */
-inline LB_FLOAT square_sum(const std::vector<LB_FLOAT>& v) {
-    LB_FLOAT sum = 0;
-    for(size_t i = 0; i < v.size(); i++) {
-        sum += LB_SQR(v[i]);
-    }
-    return sum;
-}
+
 
 /* @} */
 
