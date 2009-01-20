@@ -40,7 +40,7 @@ namespace librobotics {
     /**
      * Data structure for 2D grid map.
      */
-    struct grid2_data {
+    struct lb_grid2_data {
         vec2i       size;           //!< Size of the map
         vec2i       center;         //!< Center of the map
         pose2f      offset;         //!< Map offset in real world unit (m, mm, cm...)

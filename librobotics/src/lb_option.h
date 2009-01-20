@@ -35,7 +35,6 @@ typedef double  LB_FLOAT;
 
 #define LB_PRINT_STREAM    std::cerr
 
-#define librobotics_use_boost       0
 #define librobotics_use_cimg        1
 #define librobotics_use_opengl      0
 

@@ -186,7 +186,7 @@ inline LB_FLOAT lb_mean(const std::vector<LB_FLOAT>& v) {
     for(size_t i = 0; i < n; i++) {
         sum += v[i];
     }
-    return sum / v.size();
+    return sum / n;
 }
 
 
@@ -197,7 +197,7 @@ inline LB_FLOAT lb_stdev(const std::vector<LB_FLOAT>& v, LB_FLOAT m) {
     for(size_t i = 0; i < n; i++) {
         sum_rms_err += LB_SQR((v[i] - m));
     }
-    return sqrt(sum_rms_err / (v.size() - 1));
+    return sqrt(sum_rms_err / (n - 1));
 }
 
 

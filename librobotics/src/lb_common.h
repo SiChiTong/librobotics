@@ -54,6 +54,13 @@
 #include <vector>
 #include <list>
 
+//Boost C++
+#include <boost/numeric/ublas/vector.hpp>
+#include <boost/numeric/ublas/matrix.hpp>
+#include <boost/numeric/ublas/io.hpp>
+#include "external/boost_matrix_inverse.h"
+
+
 #if (librobotics_use_boost == 1)
 
 #endif

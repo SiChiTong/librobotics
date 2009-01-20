@@ -5,7 +5,7 @@
  *      Author: mahisorn
  */
 
-#include "device/Joystick.h"
+
 #include "librobotics.h"
 
 using namespace std;
@@ -38,7 +38,7 @@ int main(int argc, char* argv[]) {
     vector<vector<int> > range_all;
     vector<vector<vec2f> > pts_all;
 
-    build_cos_sin_table(LB_DEG2RAD(-135), LB_DEG2RAD(135), 769, co, si);
+    lb_build_cos_sin_table(LB_DEG2RAD(-135), LB_DEG2RAD(135), 769, co, si);
 
 //    while(log.real_one_step()) {
 //        LB_PRINT_VEC(log.ranges);
@@ -51,24 +51,93 @@ int main(int argc, char* argv[]) {
 
     for(int i = 0; i < log.step; i++) {
         pts_all[i].resize(769);
-        lrf_scan_point_from_scan_range(range_all[i], co, si, pts_all[i], 0, 768, 1, 0.001);
+        lb_lrf_range_threshold_filter(range_all[i], 500);
+//        lb_lrf_range_median_filter(range_all[i]);
+        lb_lrf_get_scan_point_from_scan_range(range_all[i], co, si, pts_all[i], 0, 768, 1, 0.001);
+        //lrf_scan_point_offset(pts_all[i], pose2f(-0.1, 0.3, -M_PI/4), pose2f(-0.5, 0.5, M_PI/2));
     }
 
 
-
-    size_t cnt = 0;
+    int n_segment = 0;
+    int n_line = 0;
+    bool found_arc;
+    vector<vector<vec2f> > segments;
+    vector<lrf_object> objects;
+    size_t cnt = 800;
+    vector<int> seg;
     while(!disp.is_closed()) {
         cimg_library::CImgDisplay::wait_all();
 
-        if(cnt < pts_all.size()) {
-            cimg8u img(800, 800, 1, 3, 0);
-            draw_lrf_point_cimg(img, pts_all[cnt], red, 100.0);
-            img.display(disp.disp);
+        if(disp.disp.is_keySPACE) {
+            if(cnt < pts_all.size()) {
+                LB_PRINT_VAL("=========================");
+                LB_PRINT_VAR(cnt);
+                cimg8u img(800, 800, 1, 3, 0);
+                img.draw_axis(-399, 399, 399, -399, green);
+                //draw_points_cimg(img, pts_all[cnt], red, 80.0, 0.0, -1, -1, true);
+
+                //segment
+                n_segment = lb_lrf_range_segment(range_all[cnt], seg, 100);
+                if(n_segment > 0) {
+                    //objects.clear();
+                    lb_lrf_create_segment(pts_all[cnt], seg, segments);
+
+                    LB_PRINT_VAR(n_segment);
+//                    LB_PRINT_VAR(segments.size());
+
+                    for(size_t i = 0; i <  segments.size(); i++) {
+                        lb_draw_points_cimg(img, segments[i], red, 80.0, 0.0, -1, -1, true);
+                        n_line = lb_lrf_recusive_line_fitting(segments[i], objects, 0.2, 0.1, i);
+                        LB_PRINT_VAR(n_line);
+
+                        if(n_line > 1) {
+                            for(int lc = 0; lc < n_line; lc++) {
+                                found_arc = lb_lrf_arc_fiting(objects[lc].points,
+                                                              objects,
+                                                              1.57,    //min_aparture
+                                                              2.8,     //max_aparture
+                                                              0.5,     //max_stdev
+                                                              0.1,     //arc_ratio
+                                                              0.1,     //is_line_error
+                                                              0.2);    //is_line_stdev
+                                LB_PRINT_VAR(found_arc);
+                            }
+                        } else {
+                            found_arc = lb_lrf_arc_fiting(segments[i],
+                                                          objects,
+                                                          1.57,    //min_aparture
+                                                          2.8,     //max_aparture
+                                                          0.5,     //max_stdev
+                                                          0.1,     //arc_ratio
+                                                          0.1,     //is_line_error
+                                                          0.2);    //is_line_stdev
+                            LB_PRINT_VAR(found_arc);
+                        }
+
+                        LB_PRINT_VAR(found_arc);
+                    }
+                }
+
+                for(size_t l = 0; l < objects.size(); l++) {
+                    switch(objects[l].type) {
+                        case LRF_OBJ_LINE:
+                            lb_draw_lrf_line_object_cimg(img, objects[l], white, 80);
+                            break;
+                        case LRF_OBJ_ARC:
+                            lb_draw_lrf_arc_object_cimg(img, objects[l], green_drak, 80);
+                            break;
+                        default:
+                            break;
+                    }
+                }
+                objects.clear();
+
+
+                img.display(disp.disp);
+            }
+            cnt++;
+            disp.disp.is_keySPACE = false;
         }
-
-
-
-        cnt++;
 
     }
 

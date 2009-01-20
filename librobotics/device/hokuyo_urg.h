@@ -13,6 +13,8 @@
 #define URG_4LX_NUM_STEP            769
 #define URG_4LX_START_DEG           (-135)
 #define URG_4LX_START_RAD           ((URG_4LX_START_DEG * M_PI)/180.0)
+#define URG_4LX_END_DEG             (135)
+#define URG_4LX_END_RAD             ((URG_4LX_END_DEG * M_PI)/180.0)
 #define URG_4LX_DEG_STEP            (270.0/768)
 #define URG_4LX_RAD_STEP            ((URG_4LX_DEG_STEP * M_PI)/180.0)
 #define URG_4LX_START_STEP          44
@@ -106,7 +108,6 @@ public:
 
         //send command
         fprintf(this->file, URG_SCIP10_GET_VERSION);
-
 
         //echo command
         hokuyo_urg_cmd_cmp(URG_SCIP10_GET_VERSION);
@@ -428,7 +429,7 @@ public:
     }
 
 protected:
-    char buff[80];
+    char buff[128];
 
 };
 
