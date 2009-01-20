@@ -35,6 +35,8 @@
 
 
 // Include required standard C++ headers.
+
+//C header
 #include <cstdio>
 #include <cstdlib>
 #include <cstdarg>
@@ -43,13 +45,10 @@
 #include <ctime>
 #include <cstdlib>
 
-
-
-
+//C++ header
 #include <iostream>
 #include <fstream>
 #include <string>
-
 #include <limits>
 #include <algorithm>
 #include <vector>
@@ -64,8 +63,7 @@
  * and include required headers.
  *
  * If you find that default configuration variables are
- * not adapted, you can override their values before including
- * the header file "librobotics.h" (using the #define directive).
+ * not adapted, you can override their values in lb_option.h
  */
 
 // Operating system configuration.

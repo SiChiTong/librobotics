@@ -1,7 +1,7 @@
 /*
- * lb_map2.h
+ * lb_kalman_tracker.h
  *
- *  Created on: Jan 15, 2009
+ *  Created on: Jan 19, 2009
  *      Author: mahisorn
  *
  *  Copyright (c) <2009> <Mahisorn Wongphati>
@@ -27,10 +27,15 @@
  *  OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef LB_MAP2_H_
-#define LB_MAP2_H_
+#ifndef LB_KALMAN_TRACKER_H_
+#define LB_KALMAN_TRACKER_H_
 
-#include "lb_map2_grid.h"
+#include "lb_common.h"
+#include "lb_data_type.h"
+
+namespace librobotics {
+
+}
 
 
-#endif /* LB_MAP2_H_ */
+#endif /* LB_KALMAN_TRACKER_H_ */

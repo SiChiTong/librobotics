@@ -26,11 +26,9 @@
 <option id="gnu.cpp.compiler.exe.debug.option.debugging.level.118190465" name="Debug Level" superClass="gnu.cpp.compiler.exe.debug.option.debugging.level" value="gnu.cpp.compiler.debugging.level.max" valueType="enumerated"/>
 <option id="gnu.cpp.compiler.option.include.paths.847924352" name="Include paths (-I)" superClass="gnu.cpp.compiler.option.include.paths" valueType="includePath">
 <listOptionValue builtIn="false" value="/usr/local/include/boost-1_37"/>
-<listOptionValue builtIn="false" value="/usr/include/glibmm-2.4"/>
-<listOptionValue builtIn="false" value="/usr/include/sigc++-2.0"/>
 <listOptionValue builtIn="false" value="&quot;${workspace_loc:/librobotics}&quot;"/>
 </option>
-<option id="gnu.cpp.compiler.option.other.other.154856623" name="Other flags" superClass="gnu.cpp.compiler.option.other.other" value="-c -fmessage-length=0 `pkg-config --cflags glibmm-2.4`  `pkg-config --cflags sigc++-2.0`" valueType="string"/>
+<option id="gnu.cpp.compiler.option.other.other.154856623" name="Other flags" superClass="gnu.cpp.compiler.option.other.other" value="-c -fmessage-length=0" valueType="string"/>
 <inputType id="cdt.managedbuild.tool.gnu.cpp.compiler.input.1172209197" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.input"/>
 </tool>
 <tool id="cdt.managedbuild.tool.gnu.c.compiler.exe.debug.969593" name="GCC C Compiler" superClass="cdt.managedbuild.tool.gnu.c.compiler.exe.debug">
@@ -44,7 +42,7 @@
 <listOptionValue builtIn="false" value="pthread"/>
 <listOptionValue builtIn="false" value="X11"/>
 </option>
-<option id="gnu.cpp.link.option.flags.27004569" name="Linker flags" superClass="gnu.cpp.link.option.flags" value="`pkg-config --libs glibmm-2.4`  `pkg-config --libs sigc++-2.0`" valueType="string"/>
+<option id="gnu.cpp.link.option.flags.27004569" name="Linker flags" superClass="gnu.cpp.link.option.flags" value="" valueType="string"/>
 <inputType id="cdt.managedbuild.tool.gnu.cpp.linker.input.773051354" superClass="cdt.managedbuild.tool.gnu.cpp.linker.input">
 <additionalInput kind="additionalinputdependency" paths="$(USER_OBJS)"/>
 <additionalInput kind="additionalinput" paths="$(LIBS)"/>
@@ -65,12 +63,7 @@
 <storageModule moduleId="org.eclipse.cdt.core.externalSettings"/>
 <storageModule moduleId="org.eclipse.cdt.core.language.mapping"/>
 
-<storageModule moduleId="org.eclipse.cdt.internal.ui.text.commentOwnerProjectMappings">
 
-<doc-comment-owner id="org.eclipse.cdt.ui.doxygen">
-<path value=""/>
-</doc-comment-owner>
-</storageModule>
 <storageModule moduleId="scannerConfiguration">
 <autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId="org.eclipse.cdt.make.core.GCCStandardMakePerProjectProfile"/>
 <profile id="org.eclipse.cdt.make.core.GCCStandardMakePerProjectProfile">
@@ -485,6 +478,13 @@
 </scannerInfoProvider>
 </profile>
 </scannerConfigBuildInfo>
+</storageModule>
+<storageModule moduleId="org.eclipse.cdt.internal.ui.text.commentOwnerProjectMappings">
+
+
+<doc-comment-owner id="org.eclipse.cdt.ui.doxygen">
+<path value=""/>
+</doc-comment-owner>
 </storageModule>
 </cconfiguration>
 <cconfiguration id="cdt.managedbuild.config.gnu.exe.release.853072637">
@@ -510,11 +510,9 @@
 <option id="gnu.cpp.compiler.exe.release.option.debugging.level.483982483" name="Debug Level" superClass="gnu.cpp.compiler.exe.release.option.debugging.level" value="gnu.cpp.compiler.debugging.level.none" valueType="enumerated"/>
 <option id="gnu.cpp.compiler.option.include.paths.593500441" name="Include paths (-I)" superClass="gnu.cpp.compiler.option.include.paths" valueType="includePath">
 <listOptionValue builtIn="false" value="/usr/local/include/boost-1_37"/>
-<listOptionValue builtIn="false" value="/usr/include/glibmm-2.4"/>
-<listOptionValue builtIn="false" value="/usr/include/sigc++-2.0"/>
 <listOptionValue builtIn="false" value="&quot;${workspace_loc:/librobotics}&quot;"/>
 </option>
-<option id="gnu.cpp.compiler.option.other.other.708065780" name="Other flags" superClass="gnu.cpp.compiler.option.other.other" value="-c -fmessage-length=0 `pkg-config --cflags glibmm-2.4`  `pkg-config --cflags sigc++-2.0`" valueType="string"/>
+<option id="gnu.cpp.compiler.option.other.other.708065780" name="Other flags" superClass="gnu.cpp.compiler.option.other.other" value="-c -fmessage-length=0" valueType="string"/>
 <inputType id="cdt.managedbuild.tool.gnu.cpp.compiler.input.408789737" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.input"/>
 </tool>
 <tool id="cdt.managedbuild.tool.gnu.c.compiler.exe.release.993777246" name="GCC C Compiler" superClass="cdt.managedbuild.tool.gnu.c.compiler.exe.release">
@@ -529,7 +527,7 @@
 <listOptionValue builtIn="false" value="boost_thread-gcc43-mt"/>
 <listOptionValue builtIn="false" value="X11"/>
 </option>
-<option id="gnu.cpp.link.option.flags.1782151843" name="Linker flags" superClass="gnu.cpp.link.option.flags" value="`pkg-config --libs glibmm-2.4`  `pkg-config --libs sigc++-2.0`" valueType="string"/>
+<option id="gnu.cpp.link.option.flags.1782151843" name="Linker flags" superClass="gnu.cpp.link.option.flags" value="" valueType="string"/>
 <inputType id="cdt.managedbuild.tool.gnu.cpp.linker.input.1531501159" superClass="cdt.managedbuild.tool.gnu.cpp.linker.input">
 <additionalInput kind="additionalinputdependency" paths="$(USER_OBJS)"/>
 <additionalInput kind="additionalinput" paths="$(LIBS)"/>
@@ -550,12 +548,7 @@
 <storageModule moduleId="org.eclipse.cdt.core.externalSettings"/>
 <storageModule moduleId="org.eclipse.cdt.core.language.mapping"/>
 
-<storageModule moduleId="org.eclipse.cdt.internal.ui.text.commentOwnerProjectMappings">
 
-<doc-comment-owner id="org.eclipse.cdt.ui.doxygen">
-<path value=""/>
-</doc-comment-owner>
-</storageModule>
 <storageModule moduleId="scannerConfiguration">
 <autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId="org.eclipse.cdt.make.core.GCCStandardMakePerProjectProfile"/>
 <profile id="org.eclipse.cdt.make.core.GCCStandardMakePerProjectProfile">
@@ -970,6 +963,13 @@
 </scannerInfoProvider>
 </profile>
 </scannerConfigBuildInfo>
+</storageModule>
+<storageModule moduleId="org.eclipse.cdt.internal.ui.text.commentOwnerProjectMappings">
+
+
+<doc-comment-owner id="org.eclipse.cdt.ui.doxygen">
+<path value=""/>
+</doc-comment-owner>
 </storageModule>
 </cconfiguration>
 </storageModule>

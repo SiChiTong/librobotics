@@ -24,7 +24,7 @@
  *  HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
  *  WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
  *  FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
- *  OTHER DEALINGS IN THE SOFTWARE.*
+ *  OTHER DEALINGS IN THE SOFTWARE.
  */
 
 #ifndef LB_LRF_BASIC_H_
@@ -37,38 +37,293 @@
 
 namespace librobotics {
 
-    void lrf_scan_point_from_scan_range(const std::vector<int>& ranges,
-                                        const std::vector<LB_FLOAT>& cos_table,
-                                        const std::vector<LB_FLOAT>& sin_table,
-                                        std::vector<vec2f>& scan_point,
-                                        int start,
-                                        int end,
-                                        int cluster,
-                                        LB_FLOAT scale = 1.0,
-                                        bool flip = false)
-    {
-        size_t n = ranges.size();
-        if(scan_point.size() != n) scan_point.resize(n);
 
-        if((cos_table.size() <= (size_t)end) || (sin_table.size() <= (size_t)end)) {
-            throw librobotics::LibRoboticsRuntimeException("cos/sin table size are not correct");
+
+template<typename T>
+inline void lrf_get_scan_point_from_scan_range(const std::vector<T>& ranges,
+                                               const std::vector<LB_FLOAT>& cos_table,
+                                               const std::vector<LB_FLOAT>& sin_table,
+                                               std::vector<vec2f>& scan_points,
+                                               int start,
+                                               int end,
+                                               int cluster,
+                                               LB_FLOAT scale = 1.0,
+                                               bool flip = false)
+{
+    size_t n = ranges.size();
+    if(scan_points.size() != n) scan_points.resize(n);
+
+    if((cos_table.size() <= (size_t)end) || (sin_table.size() <= (size_t)end)) {
+        throw librobotics::LibRoboticsRuntimeException("cos/sin table size are not correct");
+    }
+
+    LB_FLOAT r = 0;
+    int idx = 0;
+    for(size_t i = 0; i < n; i++) {
+        //get angle index
+        idx = start + (i*cluster) + (cluster >> 1);
+        r = ranges[i] * scale;
+        if(flip){
+            scan_points[(n - 1) - i].x = r * cos_table[idx];
+            scan_points[(n - 1) - i].y = -r * sin_table[idx];
+        } else {
+            scan_points[i].x = r * cos_table[idx];
+            scan_points[i].y = r * sin_table[idx];
         }
+    }
+}
 
-        LB_FLOAT r = 0;
-        int idx = 0;
+template<typename T>
+inline void lrf_get_scan_range_from_scan_point(const std::vector<vec2f>& scan_points,
+                                               std::vector<T>& result,
+                                               LB_FLOAT scale = 1.0)
+{
+    size_t n = scan_points.size();
+    if(result.size() < n) result.resize(n);
+    for(size_t i = 0; i < n; i++ ) {
+        result[i] = (T)(scan_points[i].size() * scale);
+    }
+}
+
+inline void lrf_scan_point_offset(std::vector<vec2f>& scan_points,
+                                     const pose2f& local_offset,
+                                     const pose2f& global_offset)
+{
+    size_t n = scan_points.size();
+    for(size_t i = 0; i < n; i++ ) {
+        scan_points[i].rotate(local_offset.a);
+        scan_points[i] += local_offset.get_vec2();
+        scan_points[i].rotate(global_offset.a);
+        scan_points[i] += global_offset.get_vec2();
+    }
+}
+
+inline void lrf_get_scan_point_offset(const std::vector<vec2f>& scan_points,
+                                      const pose2f& local_offset,
+                                      const pose2f& global_offset,
+                                      std::vector<vec2f>& result )
+{
+    size_t n = scan_points.size();
+    if(result.size() < n) result.resize(n);
+    for(size_t i = 0; i < n; i++ ) {
+        result[i] = scan_points[i];
+        result[i].rotate(local_offset.a);
+        result[i] += local_offset.get_vec2();
+        result[i].rotate(global_offset.a);
+        result[i] += global_offset.get_vec2();
+    }
+}
+
+template<typename T>
+inline void lrf_range_condition_check(const std::vector<T>& ranges,
+                                      std::vector<lrf_range_condition>& cond,
+                                      T min_range,
+                                      T max_range)
+{
+    size_t n = ranges.size();
+    for(size_t i = 0; i < n; i++ ) {
+        if(ranges[i] < min_range) {
+            cond[i] |= LRF_COND_EMPTY;
+        } else if(ranges[i] > max_range) {
+            cond[i] |= LRF_COND_FAR;
+        } else {
+            cond[i] = LRF_COND_NONE;
+        }
+    }
+}
+
+template<typename T>
+inline void lrf_range_threshold_filter(std::vector<T>& ranges,
+                                       T min_range,
+                                       T new_min = 0,
+                                       T max_range = std::numeric_limits<T>::max(),
+                                       T new_max = 0)
+{
+    size_t n = ranges.size();
+    for(size_t i = 0; i < n; i++ ) {
+        if(ranges[i] < min_range) {
+            ranges[i] = new_min;
+        }
+        else
+        if(ranges[i] > max_range) {
+            ranges[i] = new_max;
+        }
+    }
+}
+
+template<typename T>
+inline void lrf_range_median_filter(std::vector<T>& ranges,
+                                    size_t half_windows_size = 2)
+{
+    size_t n = ranges.size();
+    if(n < ((half_windows_size * 2) + 1))
+        return;
+
+    std::vector<T> r((half_windows_size * 2) + 1, 0);
+    int k = 0, l = 0;
+    for(size_t i = 0; i < n; i++) {
+        k = 0;
+        for(int j = i - half_windows_size ; j <= (int)(i + half_windows_size); j++) {
+            l = (j < 0) ? 0 : j;
+            l = (j >= (int)n) ? (n - 1) : l;
+            r[k] = ranges[l];
+            k++;
+        }
+        std::sort(r.begin(), r.end());
+        ranges[i] = r[half_windows_size];
+    }
+}
+
+template<typename T>
+inline int lrf_range_segment(const std::vector<T>& ranges,
+                             std::vector<int>& seg,
+                             T threshold,
+                             T min_range = 0)
+{
+    size_t n = ranges.size();
+    if(seg.size() != n) {
+        seg.resize(n, -1);
+    } else {
         for(size_t i = 0; i < n; i++) {
-            //get angle index
-            idx = start + (i*cluster) + (cluster >> 1);
-            r = ranges[i] * scale;
-            if(flip){
-                scan_point[(n - 1) - i].x = r * cos_table[idx];
-                scan_point[(n - 1) - i].y = -r * sin_table[idx];
+            seg[i] = -1;
+        }
+    }
+
+    bool new_segment = true;
+    T last_range = 0;
+    int n_segment = 0;
+    T range_diff = 0;
+
+    for(size_t i = 0; i < n; i++) {
+        if(ranges[i] > min_range) {
+            if(new_segment) {
+              //start new segment
+              seg[i] = n_segment;
+              new_segment = false;
+              last_range = ranges[i];
             } else {
-                scan_point[i].x = r * cos_table[idx];
-                scan_point[i].y = r * sin_table[idx];
+                range_diff = ranges[i] - last_range;
+                if(fabs(range_diff) > threshold) {
+                    //end current segment
+                    n_segment++;
+
+                    //start new segment
+                    seg[i] = n_segment;
+                    last_range = ranges[i];
+                    new_segment = false;
+                } else {
+                    //continue current segment
+                    seg[i] = n_segment;
+                    last_range = ranges[i];
+                }
+            }
+        } else {
+            if(!new_segment) {
+                //end current segment
+                n_segment++;
+                new_segment = true;
+            } else {
+                //ignore all value below min_range
+                seg[i] = -1;
             }
         }
     }
+
+    return n_segment;
+}
+
+template<typename T>
+inline int lrf_point_segment(const std::vector<vec2f>& scan_points,
+                             std::vector<int>& seg,
+                             T threshold,
+                             T min_range = 0)
+{
+    size_t n = scan_points.size();
+    if(seg.size() != n) {
+       seg.resize(n, -1);
+    } else {
+       for(size_t i = 0; i < n; i++) {
+           seg[i] = -1;
+       }
+    }
+
+    bool new_segment = true;
+    vec2f last_point;
+    int n_segment = 0;
+    LB_FLOAT dist_diff = 0;
+
+    for(size_t i = 0; i < n; i++) {
+        if(scan_points[i].size() > min_range) {
+            if(new_segment) {
+              //start new segment
+              seg[i] = n_segment;
+              new_segment = false;
+              last_point = scan_points[i];
+            } else {
+                dist_diff = (scan_points[i] - last_point).size();
+                if(dist_diff > threshold) {
+                    //end current segment
+                    n_segment++;
+
+                    //start new segment
+                    seg[i] = n_segment;
+                    last_point = scan_points[i];
+                    new_segment = false;
+                } else {
+                    //continue current segment
+                    seg[i] = n_segment;
+                    last_point = scan_points[i];
+                }
+            }
+        } else {
+            if(!new_segment) {
+                //end current segment
+                n_segment++;
+                new_segment = true;
+            } else {
+                //ignore all value below min_range
+                seg[i] = -1;
+            }
+        }
+    }
+
+    return n_segment;
+}
+
+template<typename T>
+inline void lrf_create_segment(const std::vector<T>& input,
+                               const std::vector<int>& seg,
+                               std::vector<std::vector<T> >& result)
+{
+    result.clear();
+    if(input.size() != seg.size()) return;
+
+    size_t n = input.size();
+    int current_segment = -0;
+    std::vector<T> tmp;
+    for(size_t i = 0; i < n; i++) {
+        if(seg[i] != -1) {
+            if(current_segment == seg[i]) {
+                tmp.push_back(input[i]);
+            } else {
+                //end
+                if(tmp.size() != 0) {
+                    result.push_back(tmp);
+                    tmp.clear();
+                }
+
+                //new segment;
+                current_segment = seg[i];
+                tmp.push_back(input[i]);
+           }
+       } else {
+           if(tmp.size() != 0) {
+               result.push_back(tmp);
+               tmp.clear();
+           }
+       }
+    }
+}
 
 }
 
