@@ -123,6 +123,8 @@ inline bool lb_lrf_arc_fiting(const std::vector<vec2f>& points,
                               const LB_FLOAT arc_ratio,
                               const LB_FLOAT is_line_error,
                               const LB_FLOAT is_line_stdev,
+                              const LB_FLOAT min_diameter = -1,
+                              const LB_FLOAT max_diameter = std::numeric_limits<LB_FLOAT>::max(),
                               const int id = -1,
                               const bool check_corner = true,
                               const size_t min_point = 20)
@@ -143,6 +145,10 @@ inline bool lb_lrf_arc_fiting(const std::vector<vec2f>& points,
 
     LB_FLOAT dist_lr = (left - right).size();
     LB_FLOAT dist_mc = (middle - center).size();
+
+    if( (dist_lr < min_diameter) || (dist_lr > max_diameter) ) {
+        return false;
+    }
 
 //    LB_PRINT_VAR(dist_lr);
 //    LB_PRINT_VAR(dist_mc);
@@ -252,6 +258,115 @@ inline bool lb_lrf_arc_fiting(const std::vector<vec2f>& points,
     return false;
 }
 
+inline int lb_lrf_leg_detect(const std::vector<vec2f>& points,
+                             std::vector<lrf_object>& objects,
+                             const LB_FLOAT min_size,
+                             const LB_FLOAT max_size,
+                             const LB_FLOAT leg_arc_ratio,
+                             const int id = -1,
+                             const size_t min_points = 10)
+{
+    size_t n = points.size();
+    if(n < min_points) {
+//        LB_PRINT_VAL("not enough point");
+        return 0;
+    }
+
+    vec2f middle = points[n >> 1];
+    vec2f right = points[0];
+    vec2f left = points[n - 1];
+    vec2f center = (right + left) * 0.5;
+
+    LB_FLOAT dist_lr = (left - right).size();
+
+    if(dist_lr < min_size) {
+//        LB_PRINT_VAL("too small");
+        return 0;
+    }
+
+    if(dist_lr > (2.0 * max_size)) {
+//        LB_PRINT_VAL("too big");
+        return 0;
+    }
+
+    LB_FLOAT dist_mc = (middle - center).size();
+    bool check_ratio = false;
+
+
+    if(dist_lr <= max_size) {
+        LB_PRINT_VAL("check 1 leg");
+        check_ratio = dist_mc > (leg_arc_ratio * dist_lr);
+
+        if(check_ratio) {
+            LB_PRINT_VAL("add 1 leg");
+            lrf_object leg;
+            leg.type = LRF_OBJ_LEG;
+            leg.points = points;
+            leg.extra_point[0] = center;
+            leg.extra_param[0] = dist_lr / 2; //radius
+            leg.segment_id = id;
+            objects.push_back(leg);
+        } else {
+            LB_PRINT_VAL("1 leg fail");
+        }
+        return 1;
+    } else {
+        LB_PRINT_VAL("check 2 leg");
+        //check 2 leg
+        int cnt = 0;
+        vec2f right_middle = points[n >> 2];
+        vec2f right_center = (right + middle) * 0.5;
+        LB_FLOAT dist_mr = (middle - right).size();
+        LB_FLOAT dist_rm_rc = (right_middle - right_center).size();
+
+        check_ratio = dist_rm_rc > (leg_arc_ratio * dist_mr);
+
+        if(check_ratio) {
+            //add right leg
+            LB_PRINT_VAL("add right leg");
+            lrf_object leg;
+            for(size_t i = 0; i < (n >> 1); i++) {
+                leg.points.push_back(points[i]);
+            }
+            leg.type = LRF_OBJ_LEG;
+            leg.extra_point[0] = right_center;
+            leg.extra_param[0] = dist_mr / 2; //radius
+            leg.segment_id = id;
+            objects.push_back(leg);
+            cnt++;
+        } else {
+            LB_PRINT_VAL("right leg fail");
+        }
+
+        vec2f left_middle = points[(n >> 2) + (n >> 1)];
+        vec2f left_center = (left + middle) * 0.5;
+        LB_FLOAT dist_ml = (middle - left).size();
+        LB_FLOAT dist_lm_lc = (left_middle - left_center).size();
+
+        check_ratio = dist_lm_lc > (leg_arc_ratio * dist_ml);
+
+        if(check_ratio) {
+            //add left leg
+            LB_PRINT_VAL("add left leg");
+            lrf_object leg;
+            for(size_t i = (n >> 1); i < n; i++) {
+                leg.points.push_back(points[i]);
+            }
+            leg.type = LRF_OBJ_LEG;
+            leg.extra_point[0] = left_center;
+            leg.extra_param[0] = dist_ml / 2; //radius
+            leg.segment_id = id;
+            objects.push_back(leg);
+            cnt++;
+        } else {
+            LB_PRINT_VAL("lelf leg fail");
+        }
+        return cnt;
+    }
+    return 0;
+
+
+}
 
 }
 
