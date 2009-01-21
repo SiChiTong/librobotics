@@ -33,8 +33,9 @@ public:
         }
 
         // setup parameters
-        if (setup_serial(fileno(file), aSpeed))
-           return 0;
+        if (setup_serial(fileno(file), aSpeed)) {
+            return 0;
+        }
 
         // fail
         perror("Cannot open serial device");
@@ -97,7 +98,7 @@ protected:
         tio.c_lflag &= ~(ISIG | ICANON | ECHO);
 
         // Commit
-        if (tcsetattr(aFd, TCSADRAIN, &tio) == 0)
+        if (tcsetattr(aFd, TCSAFLUSH, &tio) == 0)
             return 1;
 
         return 0;
