@@ -33,10 +33,25 @@
 typedef int  LB_INT;
 typedef double  LB_FLOAT;
 
+
 #define LB_PRINT_STREAM    std::cerr
 
+
+#ifndef librobotics_debug
+#define librobotics_debug           2
+#endif
+
+#ifndef librobotics_use_vt100
+#define librobotics_use_vt100       1
+#endif
+
+#ifndef librobotics_use_cimg
 #define librobotics_use_cimg        1
+#endif
+
+#ifndef librobotics_use_opengl
 #define librobotics_use_opengl      0
+#endif
 
 
 #endif /* LB_OPTION_H_ */

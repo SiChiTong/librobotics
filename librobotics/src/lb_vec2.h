@@ -180,22 +180,12 @@ namespace librobotics {
 
         ///Get normalized vector
         vec2 get_normalize() const {
-            if (is_zero()) {
-                return vec2();
-            } else {
-                return vec2((*this) / size());
-            }
+            return vec2((*this) / size());
         }
 
         ///Normalize the vector
         vec2& normalize() {
-            if (is_zero()) {
-                x = 0;
-                y = 0;
-                return *this;
-            } else {
-                return (*this) / size();
-            }
+            return (*this) / size();
         }
 
         /**
@@ -204,8 +194,7 @@ namespace librobotics {
          * \param angle unit select (true for radian, false for degree)
          */
         vec2 get_rotate(T angle, bool rad = true) const {
-            if (!rad)
-                angle = LB_DEG2RAD(angle);
+            if (!rad) angle = LB_DEG2RAD(angle);
             T c = cos(angle);
             T s = sin(angle);
             return vec2((T) (x * c - y * s), (T) (x * s + y * c));
@@ -217,17 +206,13 @@ namespace librobotics {
          * \param angle unit select (true for radian, false for degree)
          */
         vec2& rotate(T angle, bool rad = true) {
+            if (!rad) angle = LB_DEG2RAD(angle);
             T c = cos(angle);
             T s = sin(angle);
             T tmpx = (x * c - y * s);
             y = (x * s + y * c);
             x = tmpx;
             return *this;
-        }
-
-        ///Print vector component to stand output
-        void print() {
-            std::cout << *this << std::endl;
         }
 
         ///Support for output stream operator
@@ -248,6 +233,21 @@ namespace librobotics {
         double aj = atan2(j.y, j.x);
         return ai < aj;
     }
+
+    template<typename T>
+    vec2<T> vec2_average(const std::vector<vec2<T> >& v) {
+        size_t n = v.size();
+        if(n == 0) return vec2<T>();
+        if(n == 1) return v[0];
+        T x = 0;
+        T y = 0;
+        for(size_t i = 0; i <  n; i++) {
+            x += v[i].x;
+            y += v[i].y;
+        }
+        return vec2<T>(x/n, y/n);
+    }
+
 }
 
 

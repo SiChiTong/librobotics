@@ -90,9 +90,6 @@ inline void lb_liner_regression(const std::vector<vec2<T> >& points,
         if (sum_err_xy == 0)
             sum_err_xy = 1e-6;
 
-//      PRINT_VAR(A);
-//      PRINT_VAR(sumXY);
-
         A = A / sum_err_xy;
 
         // m^2 + A*m - 1 = 0
@@ -135,6 +132,7 @@ inline void lb_liner_regression(const std::vector<vec2<T> >& points,
         }
     } else {
         m = b = r = 0;
+        warn("%s number of point == 0", __FUNCTION__);
     }
 }
 

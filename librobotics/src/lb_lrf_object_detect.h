@@ -28,11 +28,13 @@ inline int lb_lrf_recusive_line_fitting(const std::vector<vec2f>& points,
 
     //check total point
     if(n < min_point) {
+        warn("%s: not enough point", __FUNCTION__);
         return 0;
     }
 
     //check length (simple)
     if((points[0] - points[n - 1]).size() < min_length) {
+        warn("%s: not enough length", __FUNCTION__);
         return 0;
     }
 
@@ -41,6 +43,7 @@ inline int lb_lrf_recusive_line_fitting(const std::vector<vec2f>& points,
 
     //check result
     if(m == 0 && b == 0 && r == 0) {
+        warn("%s: linear regression fail", __FUNCTION__);
         return 0;
     }
 
@@ -117,8 +120,8 @@ inline int lb_lrf_recusive_line_fitting(const std::vector<vec2f>& points,
 
 inline bool lb_lrf_arc_fiting(const std::vector<vec2f>& points,
                               std::vector<lrf_object>& objects,
-                              const LB_FLOAT min_aparture,
-                              const LB_FLOAT max_aparture,
+                              const LB_FLOAT min_angle,
+                              const LB_FLOAT max_angle,
                               const LB_FLOAT max_stdev,
                               const LB_FLOAT arc_ratio,
                               const LB_FLOAT is_line_error,
@@ -126,11 +129,11 @@ inline bool lb_lrf_arc_fiting(const std::vector<vec2f>& points,
                               const LB_FLOAT min_diameter = -1,
                               const LB_FLOAT max_diameter = std::numeric_limits<LB_FLOAT>::max(),
                               const int id = -1,
-                              const bool check_corner = true,
-                              const size_t min_point = 20)
+                              const size_t min_point = 10)
 {
     size_t n = points.size();
     if(n < min_point) {
+        warn("%s: not enough point", __FUNCTION__);
         return false;
     }
 
@@ -146,7 +149,13 @@ inline bool lb_lrf_arc_fiting(const std::vector<vec2f>& points,
     LB_FLOAT dist_lr = (left - right).size();
     LB_FLOAT dist_mc = (middle - center).size();
 
-    if( (dist_lr < min_diameter) || (dist_lr > max_diameter) ) {
+    if(dist_lr < min_diameter) {
+        warn("%s: too small", __FUNCTION__);
+        return false;
+    }
+
+    if(dist_lr > max_diameter) {
+        warn("%s: too big", __FUNCTION__);
         return false;
     }
 
@@ -161,62 +170,34 @@ inline bool lb_lrf_arc_fiting(const std::vector<vec2f>& points,
 //    LB_PRINT_VAR(check_size);
 
     if(!(check_ratio && check_size)) {
-//        std::cout << "Not an arc" << std::endl;
+        warn("%s: arc ratio and size not correct", __FUNCTION__);
         return false;
     }
 
 
-    size_t slopes_size = n - 3;
+    size_t n_angle = n - 3;
     LB_FLOAT ma = 0, mb = 0;
-    std::vector<LB_FLOAT>slopes(slopes_size, 0);
+    std::vector<LB_FLOAT>angles(n_angle, 0);
 
-    // make vector of slopes
+    // angle inside arc
     vec2f xy_temp;
-    for (size_t i = 0; i < slopes_size; i++) {
+    for (size_t i = 0; i < n_angle; i++) {
         xy_temp = points[i+1];
         ma = (left - xy_temp).theta();
         mb = (right - xy_temp).theta();
-        slopes[i] = fabs(lb_normalize_angle(ma - mb));
+        angles[i] = fabs(lb_normalize_angle(ma - mb));
     }
 
 //    LB_PRINT_VEC(slopes);
-    LB_FLOAT average = lb_mean(slopes);
-    LB_FLOAT std_dev = lb_stdev(slopes, average);
+    LB_FLOAT average = lb_mean(angles);
+    LB_FLOAT std_dev = lb_stdev(angles, average);
 
 //    LB_PRINT_VAR(average);
 //    LB_PRINT_VAR(std_dev);
 
-
-//    if(check_corner) {
-//        LB_FLOAT min = std::numeric_limits<LB_FLOAT>::max();
-//        int min_idx = 0;
-//        // if is a corner exclude it
-//        if (slopes_size > 4) {
-//            //min slope
-//            for (size_t temp = 0;temp < slopes_size; temp++) {
-//                if (slopes[temp] < min) {
-//                    min = slopes[temp];
-//                    min_idx = temp;
-//                }
-//            }
-//
-//
-//            if (((slopes_size - min_idx) > 1) && (min_idx > 1)) {
-//                if (slopes[min_idx - 2] > slopes[min_idx - 1] &&
-//                    slopes[min_idx - 1] > slopes[min_idx + 0] &&
-//                    slopes[min_idx + 1] > slopes[min_idx + 0] &&
-//                    slopes[min_idx + 2] > slopes[min_idx + 1])
-//                {
-//                    std::cout << "Is a corner" << std::endl;
-//                    return false;// is a corner
-//                }
-//            }
-//        }
-//    }
-
     //check if is line
     if ((fabs(average - M_PI) < is_line_error) && (std_dev < is_line_stdev)) {
-//        std::cout << "Is a line" << std::endl;
+        warn("%s: is a line", __FUNCTION__);
         return false;// is a line
     }
 
@@ -239,7 +220,7 @@ inline bool lb_lrf_arc_fiting(const std::vector<vec2f>& points,
             average = (2 * M_PI) + average;
         }
 
-        if((average > min_aparture) && (average < max_aparture)) {
+        if((average >= min_angle) && (average <= max_angle)) {
 //            LB_PRINT_VAR(center);
 //            LB_PRINT_VAR(radius);
             lrf_object arc;
@@ -252,8 +233,12 @@ inline bool lb_lrf_arc_fiting(const std::vector<vec2f>& points,
             arc.segment_id = id;
             objects.push_back(arc);
             return true;
-        } //if ( average...
-    }//if ( std_dev ...
+        } else {
+            warn("%s: average angle outside range", __FUNCTION__);
+        }
+    } else {
+        warn("%s: angle standard deviation > max_stdev ", __FUNCTION__);
+    }
 
     return false;
 }
@@ -268,7 +253,7 @@ inline int lb_lrf_leg_detect(const std::vector<vec2f>& points,
 {
     size_t n = points.size();
     if(n < min_points) {
-//        LB_PRINT_VAL("not enough point");
+        warn("%s: not enough point", __FUNCTION__);
         return 0;
     }
 
@@ -280,12 +265,12 @@ inline int lb_lrf_leg_detect(const std::vector<vec2f>& points,
     LB_FLOAT dist_lr = (left - right).size();
 
     if(dist_lr < min_size) {
-//        LB_PRINT_VAL("too small");
+        warn("%s: too small", __FUNCTION__);
         return 0;
     }
 
     if(dist_lr > (2.0 * max_size)) {
-//        LB_PRINT_VAL("too big");
+        warn("%s: too big", __FUNCTION__);
         return 0;
     }
 
@@ -294,7 +279,7 @@ inline int lb_lrf_leg_detect(const std::vector<vec2f>& points,
 
 
     if(dist_lr <= max_size) {
-        LB_PRINT_VAL("check 1 leg");
+//        LB_PRINT_VAL("check 1 leg");
         check_ratio = dist_mc > (leg_arc_ratio * dist_lr);
 
         if(check_ratio) {
@@ -306,12 +291,14 @@ inline int lb_lrf_leg_detect(const std::vector<vec2f>& points,
             leg.extra_param[0] = dist_lr / 2; //radius
             leg.segment_id = id;
             objects.push_back(leg);
+            return 1;
         } else {
-            LB_PRINT_VAL("1 leg fail");
+            warn("%s: 1 leg ratio fail", __FUNCTION__);
+            return 0;
         }
-        return 1;
+
     } else {
-        LB_PRINT_VAL("check 2 leg");
+//        LB_PRINT_VAL("check 2 leg");
         //check 2 leg
         int cnt = 0;
         vec2f right_middle = points[n >> 2];
@@ -323,7 +310,6 @@ inline int lb_lrf_leg_detect(const std::vector<vec2f>& points,
 
         if(check_ratio) {
             //add right leg
-            LB_PRINT_VAL("add right leg");
             lrf_object leg;
             for(size_t i = 0; i < (n >> 1); i++) {
                 leg.points.push_back(points[i]);
@@ -335,7 +321,7 @@ inline int lb_lrf_leg_detect(const std::vector<vec2f>& points,
             objects.push_back(leg);
             cnt++;
         } else {
-            LB_PRINT_VAL("right leg fail");
+            warn("%s: right leg ratio fail", __FUNCTION__);
         }
 
         vec2f left_middle = points[(n >> 2) + (n >> 1)];
@@ -347,7 +333,6 @@ inline int lb_lrf_leg_detect(const std::vector<vec2f>& points,
 
         if(check_ratio) {
             //add left leg
-            LB_PRINT_VAL("add left leg");
             lrf_object leg;
             for(size_t i = (n >> 1); i < n; i++) {
                 leg.points.push_back(points[i]);
@@ -359,13 +344,64 @@ inline int lb_lrf_leg_detect(const std::vector<vec2f>& points,
             objects.push_back(leg);
             cnt++;
         } else {
-            LB_PRINT_VAL("lelf leg fail");
+            warn("%s: left leg ratio fail", __FUNCTION__);
         }
         return cnt;
     }
     return 0;
+}
+
+inline bool lb_lrf_group_detect(const std::vector<vec2f>& points,
+                                std::vector<lrf_object>& objects,
+                                const LB_FLOAT min_size,
+                                const LB_FLOAT max_size,
+                                const int id = -1,
+                                const size_t min_points = 10)
+{
+    size_t n = points.size();
+    if(n < min_points) {
+        warn("%s: not enough point", __FUNCTION__);
+        return false;
+    }
+
+    vec2f middle = points[n >> 1];
+    vec2f right = points[0];
+    vec2f left = points[n - 1];
+    vec2f center = (right + left) * 0.5;
+
+    LB_FLOAT dist_lr = (left - right).size();
+    LB_FLOAT dist_mc = (middle - center).size();
+    LB_FLOAT dist_max = LB_MAX(dist_lr, dist_mc);
 
 
+    if(dist_max < min_size) {
+        warn("%s: too small", __FUNCTION__);
+        return false;
+    }
+
+    if(dist_max > max_size) {
+        warn("%s: too big", __FUNCTION__);
+        return false;
+    }
+
+    LB_FLOAT sum_x = 0;
+    LB_FLOAT sum_y = 0;
+    for(size_t i = 0; i < n; i++) {
+        sum_x += points[i].x;
+        sum_y += points[i].y;
+    }
+    sum_x /= n;
+    sum_y /= n;
+
+    lrf_object group;
+    group.points = points;
+    group.type = LRF_OBJ_GROUP;
+    group.extra_point[0] = vec2f(sum_x, sum_y);
+    group.extra_param[0] = dist_max / 2; //radius
+    group.segment_id = id;
+    objects.push_back(group);
+
+    return true;
 }
 
 }

@@ -1,5 +1,5 @@
 /*
- * lb_kalman_tracker.h
+ * lb_kalman_tracker2.h
  *
  *  Created on: Jan 19, 2009
  *      Author: mahisorn
@@ -27,8 +27,8 @@
  *  OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef LB_KALMAN_TRACKER_H_
-#define LB_KALMAN_TRACKER_H_
+#ifndef LB_KALMAN_TRACKER2_H_
+#define LB_KALMAN_TRACKER2_H_
 
 #include "lb_common.h"
 #include "lb_data_type.h"
@@ -37,10 +37,12 @@ namespace librobotics {
 
 
 /**
- *
+ * Using the Kalman Filter to track Human Interactive Motion
+ * Modeling and Initialization of the Kalman Filter for Translation Motion
+ * by Markus Kohler
  */
-struct lb_kf_tracker2_white_noise_acc {
-    lb_kf_tracker2_white_noise_acc()
+struct lb_kalman_tracker2 {
+    lb_kalman_tracker2()
         : x_k(4), P_k(4,4),
           xk(4),
           Pk(boost::numeric::ublas::identity_matrix<LB_FLOAT>(4)),
@@ -54,7 +56,7 @@ struct lb_kf_tracker2_white_noise_acc {
     { }
 
 
-    ~lb_kf_tracker2_white_noise_acc()
+    ~lb_kalman_tracker2()
     { }
 
 
@@ -86,9 +88,6 @@ struct lb_kf_tracker2_white_noise_acc {
         A(1,3) = dt;
         At = trans(A);
 
-        //LB_PRINT_VAR(A);
-        //LB_PRINT_VAR(At);
-
         //  z_k = Hx_k + v_k
         //  H = [1.0    0.0     0.0     0.0;
         //       0.0    1.0     0.0     0.0;
@@ -100,9 +99,6 @@ struct lb_kf_tracker2_white_noise_acc {
         H(3,3) = 0.0;
         Ht = trans(H);
 
-        //LB_PRINT_VAR(H);
-        //LB_PRINT_VAR(Ht);
-
         //  measurement covariance
         //  R = [px     0.0     0.0     0.0;
         //       0.0    py      0.0     0.0;
@@ -112,8 +108,6 @@ struct lb_kf_tracker2_white_noise_acc {
         R(1,1) = z_var_py;
         R(2,2) = z_var_vx;
         R(3,3) = z_var_vy;
-
-        //LB_PRINT_VAR(R);
 
         //  process covariance
         //  Q = (max_acc^2 * dt)/6.0 * [2*I*(dt*dt) 3*I*dt; 3*I*dt 6*I];
@@ -127,14 +121,10 @@ struct lb_kf_tracker2_white_noise_acc {
         Q(2,0) = Q2(0,0); Q(2,1) = Q2(0,1); Q(2,2) = Q3(0,0); Q(2,3) = Q3(0,1);
         Q(3,0) = Q2(1,0); Q(3,1) = Q2(1,1); Q(3,2) = Q3(1,0); Q(3,3) = Q3(1,1);
 
-        //LB_PRINT_VAR(Q);
-
         xk(0) = x0.x;
         xk(1) = x0.y;
         xk(2) = 0.0;
         xk(3) = 0.0;
-
-        //LB_PRINT_VAR(xk);
 
         LB_FLOAT ds_max = max_vel * dt;
         LB_FLOAT s2 = LB_SQR(ds_max);
@@ -209,7 +199,7 @@ struct lb_kf_tracker2_white_noise_acc {
 //        LB_PRINT_VAR(invert);
 
         if(singular) {
-            LB_PRINT_VAR(singular);
+            warn("lb_kf_tracker2_white_noise_acc::%s cannot invert sigular matrix", __FUNCTION__);
             return;
         }
 
@@ -269,7 +259,92 @@ struct lb_kf_tracker2_white_noise_acc {
     boost::numeric::ublas::matrix<LB_FLOAT> Q;      /**< process noise covariance*/
 };
 
+struct lb_kalman_tracker2_object {
+    static const int STATE_ERROR    = -1;
+    static const int STATE_START    = 0;
+    static const int STATE_BEGIN    = 1;
+    static const int STATE_TRACK    = 2;
+    static const int STATE_LOST     = 3;
+    static const int STATE_DIE      = 4;
 
+
+
+    lb_kalman_tracker2_object() { }
+    ~lb_kalman_tracker2_object() { }
+
+    void init(const vec2f& x0,
+              const LB_FLOAT max_a,
+              const LB_FLOAT max_v,
+              const LB_FLOAT update_time,
+              const LB_FLOAT z_var_px,
+              const LB_FLOAT z_var_py,
+              const LB_FLOAT z_var_vx,
+              const LB_FLOAT z_var_vy,
+              const int max_lost_frame,
+              const int min_found_frame,
+              const LB_FLOAT not_move_dist,
+              int id = -1)
+    {
+        tracker.init(x0,
+                     max_a, max_v,
+                     update_time,
+                     z_var_px, z_var_py,
+                     z_var_vx, z_var_vy);
+        this->max_lost_frame = max_lost_frame;
+        this->min_found_frame = min_found_frame;
+        this->not_move_dist = not_move_dist;
+        this->id = id;
+        state = STATE_START;
+    }
+
+    int update(const std::vector<vec2f>& points) {
+        switch(state) {
+            case STATE_START :
+                lost_cnt = max_lost_frame;
+
+
+
+
+                break;
+            case STATE_BEGIN :
+                break;
+            case STATE_TRACK :
+                break;
+            case STATE_LOST :
+                break;
+            case STATE_DIE :
+                break;
+            case STATE_ERROR :
+                break;
+            default:
+                break;
+        }
+
+
+
+        return state;
+    }
+
+    int get_position() {
+
+        return state;
+    }
+
+    int get_velocity() {
+
+        return state;
+    }
+
+    lb_kalman_tracker2 tracker;
+    int max_lost_frame;
+    int min_found_frame;
+    LB_FLOAT not_move_dist;
+    int id;
+    int state;
+    int nstate;
+
+    int lost_cnt;
+};
 
 
 
@@ -277,4 +352,4 @@ struct lb_kf_tracker2_white_noise_acc {
 }
 
 
-#endif /* LB_KALMAN_TRACKER_H_ */
+#endif /* LB_KALMAN_TRACKER2_H_ */
