@@ -200,7 +200,6 @@ inline LB_FLOAT lb_stdev(const std::vector<LB_FLOAT>& v, LB_FLOAT m) {
     return sqrt(sum_rms_err / (n - 1));
 }
 
-
 }
 
 #endif /* LB_STATISTIC_FUNCTION_H_ */

@@ -65,7 +65,7 @@ namespace librobotics {
         LRF_OBJ_LINE        = 0x01,
         LRF_OBJ_ARC         = 0x02,
         LRF_OBJ_CORNER      = 0x04,
-        LRF_OBJ_SMALL_OBJ   = 0x08,
+        LRF_OBJ_GROUP       = 0x08,
         LRF_OBJ_LEG         = 0x10,
         LRF_OBJ_LEG2        = 0x20,
         LRF_OBJ_HUMAN       = 0x40,
@@ -90,6 +90,10 @@ namespace librobotics {
             segment_id(-1)
         { }
     };
+
+    inline bool lrf_object_id_compare( const lrf_object& i, const lrf_object& j) {
+        return i.segment_id < j.segment_id;
+    }
 
 
 

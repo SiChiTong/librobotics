@@ -36,7 +36,7 @@ namespace librobotics {
 
     struct LibRoboticsException;
 
-#ifdef librobotics_use_vt100
+#if (librobotics_use_vt100 == 1)
     const char t_normal[] = { 0x1b,'[','0',';','0',';','0','m','\0' };
     const char t_red[]    = { 0x1b,'[','4',';','3','1',';','5','9','m','\0' };
     const char t_bold[]   = { 0x1b,'[','1','m','\0' };
