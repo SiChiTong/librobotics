@@ -364,7 +364,6 @@ inline void lb_lrf_create_segment(const std::vector<T>& input,
 }
 
 
-
 }
 
 

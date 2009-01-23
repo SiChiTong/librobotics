@@ -235,6 +235,13 @@ namespace librobotics {
     }
 
     template<typename T>
+    bool vec2_size_compare( const vec2<T>& i, const vec2<T>& j) {
+        double si = i.size();
+        double sj = j.size();
+        return si < sj;
+    }
+
+    template<typename T>
     vec2<T> vec2_average(const std::vector<vec2<T> >& v) {
         size_t n = v.size();
         if(n == 0) return vec2<T>();

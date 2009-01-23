@@ -133,8 +133,6 @@ struct lb_kalman_tracker2 {
         Pk(1,1) = s2;
         Pk(2,2) = v2;
         Pk(3,3) = v2;
-
-        //LB_PRINT_VAR(Pk);
     }
 
     /**
@@ -148,9 +146,6 @@ struct lb_kalman_tracker2 {
         x_k = prod(A, xk);
         matrix<LB_FLOAT> tmp0 = prod(A, Pk);
         P_k = prod(tmp0, At) + Q;
-
-//        LB_PRINT_VAR(x_k);
-//        LB_PRINT_VAR(P_k);
 
         xk = x_k;
         Pk = P_k;
@@ -174,14 +169,7 @@ struct lb_kalman_tracker2 {
         x_k = prod(A, xk); //x_k = A*x_0;
         matrix<LB_FLOAT> APk = prod(A, Pk);
 
-//        LB_PRINT_VAR(APk);
-
         P_k = prod(APk, At) + Q; //P_k = A*P_0*A' + Q;
-
-//        LB_PRINT_VAR(prod(APk, At));
-//        LB_PRINT_VAR(x_k);
-//        LB_PRINT_VAR(P_k);
-
 
         //update
         //Kk = (P_k * H') * inv((H*P_k*H') + R);
@@ -189,14 +177,8 @@ struct lb_kalman_tracker2 {
         matrix<LB_FLOAT> HP_k = prod(H, P_k);
         matrix<LB_FLOAT> HP_kHt_R = prod(HP_k, Ht) + R;
 
-//        LB_PRINT_VAR(P_kHt);
-//        LB_PRINT_VAR(HP_k);
-//        LB_PRINT_VAR(HP_kHt_R);
-
         bool singular;
         matrix<LB_FLOAT> invert = gjinverse(HP_kHt_R, singular);
-
-//        LB_PRINT_VAR(invert);
 
         if(singular) {
             warn("lb_kf_tracker2_white_noise_acc::%s cannot invert sigular matrix", __FUNCTION__);
@@ -205,25 +187,17 @@ struct lb_kalman_tracker2 {
 
         Kk = prod(P_kHt, invert);
 
-//        LB_PRINT_VAR(Kk);
-
         //zk = [pose.x; pose.y; 0; 0];
         zk(0) = z.x;
         zk(1) = z.y;
         zk(2) = 0.f;
         zk(3) = 0.f;
 
-//        LB_PRINT_VAR(zk);
-
         //xk = x_k + (Kk * (zk - (H*x_k)));
         xk =  x_k + prod(Kk, (zk - prod(H, x_k)));
 
-//        LB_PRINT_VAR(xk);
-
         //Pk = (I - Kk*H)*P_k;
         Pk = prod(identity_matrix<LB_FLOAT>(4) - prod(Kk, H), P_k);
-
-//        LB_PRINT_VAR(Pk);
 
         p.x = xk(0);
         p.y = xk(1);
@@ -264,8 +238,9 @@ struct lb_kalman_tracker2_object {
     static const int STATE_START    = 0;
     static const int STATE_BEGIN    = 1;
     static const int STATE_TRACK    = 2;
-    static const int STATE_LOST     = 3;
-    static const int STATE_DIE      = 4;
+    static const int STATE_PREDICT  = 3;
+    static const int STATE_LOST     = 4;
+    static const int STATE_DIE      = 5;
 
 
 
@@ -282,37 +257,175 @@ struct lb_kalman_tracker2_object {
               const LB_FLOAT z_var_vy,
               const int max_lost_frame,
               const int min_found_frame,
-              const LB_FLOAT not_move_dist,
-              int id = -1)
+              const LB_FLOAT dist_change_limit,
+              int id = -1,
+              bool check_moving_direction = false,
+              LB_FLOAT moving_direction_threshold = 0.0)
     {
         tracker.init(x0,
                      max_a, max_v,
                      update_time,
                      z_var_px, z_var_py,
                      z_var_vx, z_var_vy);
+        this->max_a = max_a;
+        this->max_v = max_v;
+        this->update_time = update_time;
+        this->z_var_px = z_var_px;
+        this->z_var_py = z_var_py;
+        this->z_var_vx = z_var_vx;
+        this->z_var_vy = z_var_vy;
         this->max_lost_frame = max_lost_frame;
         this->min_found_frame = min_found_frame;
-        this->not_move_dist = not_move_dist;
+        this->dist_change_limit = dist_change_limit;
         this->id = id;
+        this->check_moving_direction = check_moving_direction;
+        this->moving_direction_threshold = moving_direction_threshold;
         state = STATE_START;
+        last_p = x0;
     }
 
+    void reset_position(const vec2f & x0) {
+        tracker.init(x0,
+                     max_a, max_v,
+                     update_time,
+                     z_var_px, z_var_py,
+                     z_var_vx, z_var_vy);
+    }
+
+
     int update(const std::vector<vec2f>& points) {
+        LB_FLOAT closest_dist = std::numeric_limits<LB_FLOAT>::max();
+        vec2f move_dir;
+        LB_FLOAT move_dir_size = 0;
+        vec2f good_point;
+        bool found = false;
+        for(size_t i = 0; i < points.size(); i++) {
+            move_dir = points[i] - last_p;
+            move_dir_size = move_dir.size();
+
+            if(check_moving_direction) {
+
+                LB_PRINT_VAR("Not implement ");
+                return STATE_ERROR;
+//                LB_PRINT_VAR(points[i]);
+//    //            LB_PRINT_VAR(move_dir.get_normalize());
+//    //            LB_PRINT_VAR(last_v.get_normalize());
+//                LB_PRINT_VAR(move_dir_size);
+//
+//                LB_FLOAT min_angle = lb_minimum_angle_distance(move_dir.theta(), last_v.theta());
+//                LB_PRINT_VAR(min_angle);
+
+
+            } else {
+                //check with nearest point
+                if(move_dir_size <= dist_change_limit) {
+                    if(move_dir_size <= closest_dist) {
+                        closest_dist = move_dir_size;
+                        good_point = points[i];
+                        found = true;
+                    }
+                } else {
+                    warn("%s distance change limit", __FUNCTION__);
+                }
+            }
+
+        }
+
         switch(state) {
             case STATE_START :
-                lost_cnt = max_lost_frame;
+                found_cnt = max_lost_frame / 2; //start immediately
 
-
-
+                if(found) {
+                    nstate = STATE_TRACK;
+                    LB_PRINT_VAL("go STATE_BEGIN");
+                } else {
+                    nstate = STATE_START;
+                    LB_PRINT_VAL("repeat STATE_START");
+                }
 
                 break;
             case STATE_BEGIN :
+                if(found) {
+                    LB_PRINT_VAL("Waiting");
+                    found_cnt++;
+                    if(found > min_found_frame) {
+                        nstate = STATE_TRACK;
+                        LB_PRINT_VAL("go STATE_TRACK");
+                        break;
+                    }
+                } else {
+                    LB_PRINT_VAL("lost during waiting");
+                    found_cnt--;
+                    if(found_cnt <= 0) {
+                        nstate = STATE_LOST;
+                        LB_PRINT_VAL("go STATE_LOST");
+                        break;
+                    }
+                }
+                nstate = STATE_BEGIN;
+                LB_PRINT_VAL("repeat STATE_BEGIN");
+
                 break;
             case STATE_TRACK :
+                if(found) {
+                    LB_PRINT_VAL("Predict and update");
+                    tracker.predict_update(good_point, last_p, last_v);
+                    found_cnt++;
+                    if(found_cnt > max_lost_frame)
+                        found_cnt = max_lost_frame;
+                    nstate = STATE_TRACK;
+                    LB_PRINT_VAL("repeat STATE_TRACK");
+                } else {
+                    tracker.predict(last_p, last_v);
+                    found_cnt--;
+                    if(found_cnt <= 0) {
+                        nstate = STATE_LOST;
+                        LB_PRINT_VAL("go STATE_LOST");
+                        break;
+                    }
+                    nstate = STATE_PREDICT;
+                    LB_PRINT_VAL("go STATE_PREDICT");
+                }
+                break;
+            case STATE_PREDICT:
+                if(!found) {
+                    LB_PRINT_VAL("Predict only");
+                    tracker.predict(last_p, last_v);
+                    found_cnt--;
+                    if(found_cnt <= 0) {
+                        nstate = STATE_LOST;
+                        LB_PRINT_VAL("go STATE_LOST");
+                        break;
+                    }
+                } else {
+                    tracker.predict_update(good_point, last_p, last_v);
+                    found_cnt++;
+                    nstate = STATE_TRACK;
+                    LB_PRINT_VAL("go STATE_TRACK");
+                }
+
                 break;
             case STATE_LOST :
+                if(found) {
+                    LB_PRINT_VAL("Recover");
+                    found_cnt = 1;
+                    nstate = STATE_BEGIN;
+                    LB_PRINT_VAL("go STATE_BEGIN");
+                } else {
+                    LB_PRINT_VAL("Lost");
+                    found_cnt--;
+                    if(found_cnt < -(max_lost_frame/2)) {
+                        nstate = STATE_DIE;
+                        LB_PRINT_VAL("go STATE_DIE");
+                    } else {
+                        nstate = STATE_LOST;
+                        LB_PRINT_VAL("repeat STATE_LOST");
+                    }
+                }
                 break;
             case STATE_DIE :
+                nstate = STATE_DIE;
+                LB_PRINT_VAL("repeat STATE_DIE");
                 break;
             case STATE_ERROR :
                 break;
@@ -320,30 +433,28 @@ struct lb_kalman_tracker2_object {
                 break;
         }
 
-
-
+        state = nstate;
         return state;
     }
 
-    int get_position() {
-
-        return state;
-    }
-
-    int get_velocity() {
-
-        return state;
-    }
-
+    int state;
+    int id;
+    vec2f last_p;
+    vec2f last_v;
+    int found_cnt;
     lb_kalman_tracker2 tracker;
+
+protected:
     int max_lost_frame;
     int min_found_frame;
-    LB_FLOAT not_move_dist;
-    int id;
-    int state;
+    LB_FLOAT dist_change_limit;
+    bool check_moving_direction;
+    LB_FLOAT moving_direction_threshold;
+    LB_FLOAT max_a, max_v;
+    LB_FLOAT update_time;
+    LB_FLOAT z_var_px, z_var_py;
+    LB_FLOAT z_var_vx,  z_var_vy;
     int nstate;
-
-    int lost_cnt;
 };
 
 
