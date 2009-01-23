@@ -149,12 +149,12 @@ inline bool lb_lrf_arc_fiting(const std::vector<vec2f>& points,
     LB_FLOAT dist_lr = (left - right).size();
     LB_FLOAT dist_mc = (middle - center).size();
 
-    if(dist_lr < min_diameter) {
+    if(dist_lr <= min_diameter) {
         warn("%s: too small", __FUNCTION__);
         return false;
     }
 
-    if(dist_lr > max_diameter) {
+    if(dist_lr >= max_diameter) {
         warn("%s: too big", __FUNCTION__);
         return false;
     }
@@ -288,7 +288,7 @@ inline int lb_lrf_leg_detect(const std::vector<vec2f>& points,
             leg.type = LRF_OBJ_LEG;
             leg.points = points;
             leg.extra_point[0] = center;
-            leg.extra_param[0] = dist_lr / 2; //radius
+            leg.extra_param[0] = dist_lr * 0.5; //radius
             leg.segment_id = id;
             objects.push_back(leg);
             return 1;
@@ -339,12 +339,26 @@ inline int lb_lrf_leg_detect(const std::vector<vec2f>& points,
             }
             leg.type = LRF_OBJ_LEG;
             leg.extra_point[0] = left_center;
-            leg.extra_param[0] = dist_ml / 2; //radius
+            leg.extra_param[0] = dist_ml * 0.5; //radius
             leg.segment_id = id;
             objects.push_back(leg);
             cnt++;
         } else {
             warn("%s: left leg ratio fail", __FUNCTION__);
+        }
+
+        if(cnt == 2) {
+            //remove last two leg
+            objects.pop_back();
+            objects.pop_back();
+
+            lrf_object leg2;
+            leg2.points = points;
+            leg2.type = LRF_OBJ_LEG2;
+            leg2.extra_point[0] = center;
+            leg2.extra_param[0] = dist_lr * 0.5;
+            leg2.segment_id = id;
+            objects.push_back(leg2);
         }
         return cnt;
     }
@@ -403,6 +417,111 @@ inline bool lb_lrf_group_detect(const std::vector<vec2f>& points,
 
     return true;
 }
+
+inline int lb_lrf_object_human_check(std::vector<lrf_object>& objects,
+                                     const LB_FLOAT max_leg_distance,
+                                     const LB_FLOAT min_group_size,
+                                     const LB_FLOAT max_group_size)
+{
+    size_t n = objects.size();
+
+    if(n == 0) return 0;
+
+    int human_cnt = 0;
+    std::list<lrf_object> leg_object;
+    std::list<lrf_object>::iterator it;
+    LB_FLOAT leg_dist;
+    for(size_t i = 0; i < n; i++) {
+        if(objects[i].type == LRF_OBJ_LEG2) {
+            //add human
+//            LB_PRINT_VAL("add 2 leg");
+            lrf_object human = objects[i];
+            human.type = LRF_OBJ_HUMAN;
+            objects.push_back(human);
+            human_cnt++;
+        } else if(objects[i].type == LRF_OBJ_LEG) {
+            if(leg_object.size() > 0) {
+                //check current leg with leg_list
+                for (it = leg_object.begin(); it != leg_object.end(); it++) {
+                    //check distance
+                    leg_dist = ((*it).extra_point[0] - objects[i].extra_point[0]).size();
+                    if(leg_dist < max_leg_distance) {
+                        LB_PRINT_VAL("add 1+1 leg");
+                        //add human
+                        lrf_object human;
+                        human.points = (*it).points;
+                        human.points.insert( human.points.end(),
+                                             objects[i].points.begin(),
+                                             objects[i].points.end());
+                        human.extra_point[0] =
+                            ((*it).extra_point[0] + objects[i].extra_point[0]) * 0.5;
+                        human.type = LRF_OBJ_HUMAN;
+                        objects.push_back(human);
+                        human_cnt++;
+
+
+                        //remove
+                        leg_object.erase(it);
+                        break;
+                    } else {
+//                        LB_PRINT_VAL("add new leg to the list");
+                        leg_object.push_back(objects[i]);
+                    }
+                }
+            } else {
+//                LB_PRINT_VAL("get 1st leg");
+                leg_object.push_back(objects[i]);
+            }
+        }
+    }
+
+
+    //check all orphan leg
+    int pass = 0;
+    int group_idx = -1;
+    while(!leg_object.empty()) {
+        //check 1 leg condition
+        it = leg_object.begin();
+        pass = 2;
+        group_idx = -1;
+        for(size_t i = 0; i < n; i++) {
+            if(objects[i].segment_id == (*it).segment_id) {
+                switch(objects[i].type) {
+                case LRF_OBJ_LINE : pass--; break;
+                case LRF_OBJ_ARC : pass--; break;
+                case LRF_OBJ_GROUP :
+                    if(min_group_size <= objects[i].extra_param[0] &&
+                       max_group_size >= objects[i].extra_param[0])
+                    {
+                        pass++;
+                        group_idx = i;
+                    }
+                    break;
+                default:
+                    break;
+                }
+            }
+        }
+
+        if(pass >= 2) {
+//            LB_PRINT_VAL("add 1 leg human");
+            if(group_idx == -1) {
+                lrf_object human = (*it);
+                human.type = LRF_OBJ_HUMAN;
+                objects.push_back(human);
+            } else {
+                lrf_object human = objects[group_idx];
+                human.type = LRF_OBJ_HUMAN;
+                objects.push_back(human);
+            }
+            human_cnt++;
+        }
+        leg_object.pop_front();
+    }
+
+    return human_cnt;
+}
+
 
 }
 
