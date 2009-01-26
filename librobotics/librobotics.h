@@ -1,39 +1,40 @@
-///*
-// *  File(s)     : librobotics.h (C++ header)
-// *
-// *  Description : The C++ Robotics Library.
-// *                This file is the main part of the LibRobotics project.
-// *                ( http://code.google.com/p/librobotics/ )
-// *
-// *  Created on  : Oct 24, 2008
-// *      Author  : Mahisorn Wongphati
-// *
-// *  Copyright (c) <2008> <Mahisorn Wongphati>
-// *  Permission is hereby granted, free of charge, to any person
-// *  obtaining a copy of this software and associated documentation
-// *  files (the "Software"), to deal in the Software without
-// *  restriction, including without limitation the rights to use,
-// *  copy, modify, merge, publish, distribute, sublicense, and/or sell
-// *  copies of the Software, and to permit persons to whom the
-// *  Software is furnished to do so, subject to the following
-// *  conditions:
-// *
-// *  The above copyright notice and this permission notice shall be
-// *  included in all copies or substantial portions of the Software.
-// *
-// *  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
-// *  EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
-// *  OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
-// *  NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
-// *  HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
-// *  WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
-// *  FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
-// *  OTHER DEALINGS IN THE SOFTWARE.
-// */
-//
-#ifndef librobotics_version
-#define librobotics_version 0.1
+/*
+ *  File(s)     : librobotics.h (C++ header)
+ *
+ *  Description : The C++ Robotics Library.
+ *                This file is the main part of the LibRobotics project.
+ *                ( http://code.google.com/p/librobotics/ )
+ *
+ *  Created on  : Oct 24, 2008
+ *      Author  : Mahisorn Wongphati
+ *
+ *  Copyright (c) <2008> <Mahisorn Wongphati>
+ *  Permission is hereby granted, free of charge, to any person
+ *  obtaining a copy of this software and associated documentation
+ *  files (the "Software"), to deal in the Software without
+ *  restriction, including without limitation the rights to use,
+ *  copy, modify, merge, publish, distribute, sublicense, and/or sell
+ *  copies of the Software, and to permit persons to whom the
+ *  Software is furnished to do so, subject to the following
+ *  conditions:
+ *
+ *  The above copyright notice and this permission notice shall be
+ *  included in all copies or substantial portions of the Software.
+ *
+ *  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ *  EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+ *  OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+ *  NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+ *  HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+ *  WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ *  FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+ *  OTHER DEALINGS IN THE SOFTWARE.
+ */
 
+#ifndef librobotics_version
+#define librobotics_version 0.2
+
+//base
 #include "src/lb_common.h"
 #include "src/lb_simple_gui.h"
 #include "src/lb_cimg_draw.h"
@@ -44,11 +45,17 @@
 #include "src/lb_log_file.h"
 #include "src/lb_statistic_function.h"
 #include "src/lb_data_type.h"
-#include "src/lb_map2.h"
+#include "src/lb_math_model.h"
+
+//sensor function
 #include "src/lb_lrf_basic.h"
 #include "src/lb_lrf_object_detect.h"
-#include "src/lb_math_model.h"
+
+//object tracker
 #include "src/lb_kalman_tracker2.h"
+
+//Localization and/or Mapping
+#include "src/lb_map2_grid.h"
 
 
 //
@@ -270,413 +277,9 @@
 //
 
 //
-//    /*-------------------------------------------------------------------------
-//     *
-//     * Definition of the LibRobotics: 3D robot configuration structures and functions
-//     *
-//     -------------------------------------------------------------------------*/
-//
-//    template<typename T>
-//    struct vec3 {
-//        T x, y, z;
-//        vec3() : x(0), y(0), z(0) { }
-//    };
-//    typedef vec3<int> vec3i;
-//    typedef vec3<long> vec3l;
-//    typedef vec3<float> vec3f;
-//    typedef vec3<double> vec3d;
-//
-//    template<typename T>
-//    struct pose3 {
-//        T x, y, z, ax, ay, az;
-//        pose3() : x(0), y(0), z(0), ax(0), ay(0), az(0) { }
-//    };
-//    typedef pose3<float> pose3f;
-//    typedef pose3<double> pose3d;
-//
-//    template<typename T> struct bbox3 {
-//        vec3<T> min, max;
-//    };
-//    typedef bbox3<int> bbox3i;
-//    typedef bbox3<long> bbox3l;
-//    typedef bbox3<float> bbox3f;
-//    typedef bbox3<double> bbox3d;
 //
 //
-//
-//
-//    /*-------------------------------------------------------
-//     *
-//     * Definition of the LibRobotics: Log files reader (CARMEN and other simple formats)
-//     * (http://carmen.sourceforge.net)
-//     *
-//     -------------------------------------------------------*/
-//
-//    template<typename T>
-//    struct logdata_simple_lrf {
-//        std::vector<std::vector<T> > lrf;
-//        int step;
-//        std::ifstream log_file;
-//        std::string label_lrf;
-//        std::string fn;
-//
-//        logdata_simple_lrf() : step(0) { }
-//        void open(const std::string& filename,
-//                  const std::string& lrf_label)
-//        {
-//            open_file_with_exception(log_file, filename);
-//            label_lrf = lrf_label;
-//            fn = filename;
-//        }
-//
-//        int read_all() {
-//            while(read_one_line()) {step++;}
-//            return step;
-//        }
-//
-//        bool read_one_line() {
-//            //get label
-//            std::string tmp;
-//            log_file >> tmp;
-//
-//            if(log_file.eof()) {
-//                warn("End of %s", fn.c_str());
-//                return false;
-//            }
-//
-//            if(tmp.compare(label_lrf) == 0) {
-//                int max;
-//                log_file >> max;
-//                std::vector<T> ranges(max);
-//                for (int i = 0; i < max; i++) {
-//                    log_file >> ranges[i];
-//                }
-//                lrf.push_back(ranges);
-//            } else {
-//                throw LibRoboticsRuntimeException("Uninterpretable line with label: %s in %s", tmp.c_str(), fn.c_str());
-//            }
-//            return true;
-//        }
-//    };
-//
-//
-//    template<typename T1, typename T2>
-//    struct logdata_simple_odo_lrf {
-//        std::vector<pose2<T1> > odo;
-//        std::vector<std::vector<T2> > lrf;
-//        int step;
-//        std::ifstream log_file;
-//        std::string label_odo;
-//        std::string label_lrf;
-//        std::string fn;
-//
-//        logdata_simple_odo_lrf() : step(0) { }
-//
-//        void open(const std::string& filename,
-//                  const std::string& odo_label,
-//                  const std::string& lrf_label)
-//        {
-//            open_file_with_exception(log_file, filename);
-//            label_odo = odo_label;
-//            label_lrf = lrf_label;
-//            fn = filename;
-//        }
-//
-//        int read_all() {
-//            std::cerr << "Read all log data...";
-//            int cnt = 0;
-//            while(read_one_step()) {
-//                cnt++;
-//                if(cnt % 10 == 0)
-//                    std::cerr << ".";
-//            }
-//            std::cerr << "done with " << step << " steps read\n";
-//            return step;
-//        }
-//
-//        bool read_one_step() {
-//            //read 2 line (odo and lrf)
-//            if(!read_one_line() || !read_one_line()) {
-//                return false;
-//            }
-//            step++;
-//            return true;
-//        }
-//
-//        bool read_one_line() {
-//            //get label
-//            std::string tmp;
-//            log_file >> tmp;
-//
-//            if(log_file.eof()) {
-//                warn("End of %s", fn.c_str());
-//                return false;
-//            }
-//
-//            if(tmp.compare(label_odo) == 0) {
-//                pose2<T1> p;
-//                log_file >> p;
-//                p.a = norm_a_rad(p.a);
-//                odo.push_back(p);
-//            } else
-//            if(tmp.compare(label_lrf) == 0) {
-//                int max;
-//                log_file >> max;
-//                std::vector<T2> ranges(max);
-//                for (int i = 0; i < max; i++) {
-//                    log_file >> ranges[i];
-//                }
-//                lrf.push_back(ranges);
-//            } else {
-//                throw LibRoboticsRuntimeException("Uninterpretable line with label: %s in %s", tmp.c_str(), fn.c_str());
-//            }
-//            return true;
-//        }
-//    };
-//
-//    template<typename T1, typename T2>
-//    struct logdata_simple_odo_us {
-//        std::vector<pose2<T1> > odo;
-//        std::vector<std::vector<vec2<T2> > > us;
-//        int step;
-//        std::ifstream log_file;
-//        std::string label_odo;
-//        std::string label_us;
-//        std::string fn;
-//
-//        logdata_simple_odo_us() : step(0) { }
-//
-//        void open(const std::string& filename,
-//                  const std::string& odo_label,
-//                  const std::string& us_label)
-//        {
-//            open_file_with_exception(log_file, filename);
-//            label_odo = odo_label;
-//            label_us = us_label;
-//            fn = filename;
-//        }
-//
-//        int read_all() {
-//            std::cerr << "Read all log data...";
-//            int cnt = 0;
-//            while(read_one_step()) {
-//                cnt++;
-//                if(cnt % 10 == 0)
-//                    std::cerr << ".";
-//            }
-//            std::cerr << "done with " << step << " steps read\n";
-//            return step;
-//        }
-//
-//        bool read_one_step() {
-//            //read 2 line (odo and lrf)
-//            if(!read_one_line() || !read_one_line()) {
-//                return false;
-//            }
-//            step++;
-//            return true;
-//        }
-//
-//        bool read_one_line() {
-//            //get label
-//            std::string tmp;
-//            log_file >> tmp;
-//
-//            if(log_file.eof()) {
-//                warn("End of %s", fn.c_str());
-//                return false;
-//            }
-//
-//            if(tmp.compare(label_odo) == 0) {
-//                pose2<T1> p;
-//                log_file >> p;
-//                p.a = norm_a_rad(p.a);
-//                odo.push_back(p);
-//            } else
-//            if(tmp.compare(label_us) == 0) {
-//                int max;
-//                log_file >> max;
-//                std::vector<vec2<T2> > ranges(max);
-//                for (int i = 0; i < max; i++) {
-//                    log_file >> ranges[i];
-//                }
-//                us.push_back(ranges);
-//            } else {
-//                throw LibRoboticsRuntimeException("Uninterpretable line with label: %s in %s", tmp.c_str(), fn.c_str());
-//            }
-//            return true;
-//        }
-//    };
-//
-//    template<typename T1, typename T2>
-//    struct logdata_simple_odo_n_lrf {
-//        std::vector<pose2<T1> > odo;
-//        std::vector<std::vector<std::vector<T2> > > n_lrf;
-//        int num_lrf;
-//        int step;
-//        std::ifstream log_file;
-//        std::string label_odo;
-//        std::vector<std::string> label_n_lrf;
-//        std::string fn;
-//
-//        logdata_simple_odo_n_lrf() : step(0) { }
-//
-//        void open(const std::string& filename,
-//                  int lrf_num,
-//                  const std::string& odo_label,
-//                  const std::vector<std::string>& lrf_labels)
-//        {
-//            open_file_with_exception(log_file, filename);
-//            num_lrf = lrf_num;
-//            label_odo = odo_label;
-//            label_n_lrf = lrf_labels;
-//            fn = filename;
-//            n_lrf.resize(lrf_num);
-//        }
-//
-//        int read_all() {
-//            while(read_one_step()) { }
-//            return step;
-//        }
-//
-//        bool read_one_step() {
-//            for(int i = 0; i < (1 + num_lrf); i++) {
-//                if(!read_one_line())
-//                    return false;
-//            }
-//            step++;
-//            return true;
-//        }
-//
-//
-//        bool read_one_line() {
-//           //get label
-//           std::string tmp;
-//           log_file >> tmp;
-//
-//           if(log_file.eof()) {
-//               warn("End of %s", fn.c_str());
-//               return false;
-//           }
-//
-//           if(tmp.compare(label_odo) == 0) {
-//               pose2<T1> p;
-//               log_file >> p;
-//               p.a = norm_a_rad(p.a);
-//               odo.push_back(p);
-//           } else {
-//               int lrf_id = -1;
-//               for(int i = 0; i < num_lrf; i++) {
-//                   //check label
-//                   if(tmp.compare(label_n_lrf[i]) == 0)
-//                       lrf_id = i;
-//               }
-//
-//               if(lrf_id >= 0) {
-//                   int max;
-//                   log_file >> max;
-//                   std::vector<T2> ranges(max);
-//
-//                   int i = 0;
-//                   for (i = 0; i < max; i++) {
-//                       log_file >> ranges[i];
-//                   }
-//
-//                   n_lrf[lrf_id].push_back(ranges);
-//               } else {
-//                   throw LibRoboticsRuntimeException("Uninterpretable line with label: %s in %s", tmp.c_str(), fn.c_str());
-//               }
-//           }
-//           return true;
-//       }
-//    };
-//
-//    template <typename T1, typename T2>
-//    struct logdata_buggy_robot {
-//    	struct buggy_odo {
-//    		T1 ds, da, a;
-//    	};
-//    	struct buggy_gps {
-//    		T1 x, y, a, v;
-//    		int step;
-//    	};
-//    	std::vector<buggy_odo>	odo;
-//    	std::vector<std::vector<T2> > lrf;
-//    	std::vector<buggy_gps> gps;
-//    	int step;
-//    	std::ifstream log_file;
-//    	std::string fn;
-//    	bool is_gps;
-//
-//    	logdata_buggy_robot() : step(0), is_gps(false) { }
-//
-//        void open(const std::string& filename) {
-//            open_file_with_exception(log_file, filename);
-//            fn = filename;
-//        }
-//
-//        int read_all() {
-//             while(read_one_step()) { }
-//             return step;
-//        }
-//
-//        bool read_one_step() {
-//            for(int i = 0; i < 20; i++) {
-//                if(!read_one_line())
-//                    return false;
-//            }
-//            if(!read_one_line())
-//                return false;
-//            if(!is_gps) {
-//                return false;
-//            }
-//            is_gps = false;
-//            step++;
-//            return true;
-//        }
-//
-//    	bool read_one_line() {
-//            //get label
-//            std::string tmp;
-//            log_file >> tmp;
-//
-//            if(log_file.eof()) {
-//            	warn("End of %s", fn.c_str());
-//            	return false;
-//            }
-//
-//            if(tmp.compare("Odo") == 0) {
-//            	buggy_odo odo_tmp;
-//            	log_file >> odo_tmp.ds;
-//            	log_file >> odo_tmp.da;
-//            	log_file >> odo_tmp.a;
-//            	if(odo_tmp.a < 0) odo_tmp.a += 2*M_PI;
-//            	odo.push_back(odo_tmp);
-//            } else
-//            if(tmp.compare("Laser") == 0) {
-//            	int max;
-//				log_file >> max;
-//				std::vector<T2> ranges(max);
-//				for (int i = 0; i < max; i++) {
-//					log_file >> ranges[i];
-//				}
-//				lrf.push_back(ranges);
-//            } else
-//            if(tmp.compare("GPS") == 0) {
-//                buggy_gps gps_tmp;
-//				log_file >> gps_tmp.x;
-//				log_file >> gps_tmp.y;
-//				log_file >> gps_tmp.a;
-//				log_file >> gps_tmp.v;
-//				gps.push_back(gps_tmp);
-//				is_gps = true;
-//            } else {
-//                throw LibRoboticsRuntimeException("Uninterpretable line with label: %s in %s", tmp.c_str(), fn.c_str());
-//            }
-//            return true;
-//    	}
-//    };
-//
+
 //
 //
 //    /*-------------------------------------------------------------------------
