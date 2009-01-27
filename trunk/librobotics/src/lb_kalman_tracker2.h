@@ -31,6 +31,7 @@
 #define LB_KALMAN_TRACKER2_H_
 
 #include "lb_common.h"
+#include "lb_exception.h"
 #include "lb_data_type.h"
 
 namespace librobotics {

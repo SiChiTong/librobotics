@@ -31,6 +31,7 @@
 #define LB_LRF_BASIC_H_
 
 #include "lb_common.h"
+#include "lb_exception.h"
 #include "lb_macro_function.h"
 #include "lb_misc_function.h"
 #include "lb_data_type.h"
