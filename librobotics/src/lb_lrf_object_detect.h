@@ -31,9 +31,11 @@
 #define LB_LRF_OBJECT_DETECT_H_
 
 #include "lb_common.h"
+#include "lb_exception.h"
 #include "lb_data_type.h"
 #include "lb_regression.h"
 #include "lb_statistic_function.h"
+
 
 
 namespace librobotics {
