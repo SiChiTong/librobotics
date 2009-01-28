@@ -482,9 +482,8 @@ namespace librobotics {
             }
             return img;
         }
-    };
 #endif //(librobotics_use_cimg == 1)
-
+    };
 }
 
 
