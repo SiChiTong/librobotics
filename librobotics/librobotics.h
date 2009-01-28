@@ -47,6 +47,9 @@
 #include "src/lb_data_type.h"
 #include "src/lb_math_model.h"
 
+//low level control function
+#include "src/lb_simple_control.h"
+
 //sensor function
 #include "src/lb_lrf_basic.h"
 #include "src/lb_lrf_object_detect.h"
