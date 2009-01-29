@@ -49,7 +49,7 @@ namespace librobotics {
 
         ///Constructor
         template<typename T1>
-        vec2(T1 xx, T1 yy) :
+        vec2(const T1 xx, const T1 yy) :
             x(xx), y(yy) {
         }
 
@@ -193,7 +193,7 @@ namespace librobotics {
          * \param angle rotate angle
          * \param angle unit select (true for radian, false for degree)
          */
-        vec2 get_rotate(T angle, bool rad = true) const {
+        vec2 get_rotate(const T angle,const  bool rad = true) const {
             if (!rad) angle = LB_DEG2RAD(angle);
             T c = cos(angle);
             T s = sin(angle);
@@ -205,8 +205,11 @@ namespace librobotics {
          * \param angle rotate angle
          * \param angle unit select (true for radian, false for degree)
          */
-        vec2& rotate(T angle, bool rad = true) {
-            if (!rad) angle = LB_DEG2RAD(angle);
+        vec2& rotate(const T angle, const bool rad = true) {
+            LB_FLOAT a = angle;
+            if (!rad)
+                a = LB_DEG2RAD(angle);
+
             T c = cos(angle);
             T s = sin(angle);
             T tmpx = (x * c - y * s);

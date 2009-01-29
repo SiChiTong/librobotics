@@ -50,13 +50,13 @@ namespace librobotics {
 
         ///Constructor
         template<typename T1>
-        pose2(T1 xx, T1 yy, T1 aa) :
+        pose2(const T1 xx,const T1 yy,const  T1 aa) :
             x(xx), y(yy), a(aa)
         { }
 
         ///Constructor
         template<typename T1>
-        pose2(vec2<T1> p, T1 aa) :
+        pose2(const vec2<T1>& p, const T1 aa) :
             x(p.x), y(p.y), a(aa)
         { }
 

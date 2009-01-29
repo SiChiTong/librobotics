@@ -58,24 +58,23 @@ struct lb_lrf_psm_cfg {
 
 };
 
-    template <typename T>
-    bool lrf_psm(const pose2f& ref_robot_pose,
-                 const pose2f& ref_lrf_pose,
-                 const std::vector<T>& ref_ranges,
-                 const std::vector<unsigned int>& ref_bad,
-                 const std::vector<int>& ref_segment,
-                 const pose2f& act_robot_pose,
-                 const pose2f& act_lrf_pose,
-                 const std::vector<T>& act_ranges,
-                 const std::vector<unsigned int>& act_bad,
-                 const std::vector<int>& act_segment,
-                 const std::vector<LB_FLOAT>& fi,      //angle lookup table
-                 const std::vector<LB_FLOAT>& co,      //cosine lookup table
-                 const std::vector<LB_FLOAT>& si,      //sine lookup table
-                 const lrf_psm_cfg& cfg,
-                 pose2f& rel_lrf_pose,                  //scan match result
-                 pose2f& rel_robot_pose,
-                 bool force_check = true)
+    inline bool lrf_psm(const pose2f& ref_robot_pose,
+                        const pose2f& ref_lrf_pose,
+                        const std::vector<LB_FLOAT>& ref_ranges,
+                        const std::vector<unsigned int>& ref_bad,
+                        const std::vector<int>& ref_segment,
+                        const pose2f& act_robot_pose,
+                        const pose2f& act_lrf_pose,
+                        const std::vector<LB_FLOAT>& act_ranges,
+                        const std::vector<unsigned int>& act_bad,
+                        const std::vector<int>& act_segment,
+                        const std::vector<LB_FLOAT>& fi_table,      //angle lookup table
+                        const std::vector<LB_FLOAT>& co_table,      //cosine lookup table
+                        const std::vector<LB_FLOAT>& si_table,      //sine lookup table
+                        const lrf_psm_cfg& cfg,
+                        pose2f& rel_lrf_pose,                  //scan match result
+                        pose2f& rel_robot_pose,
+                        bool force_check = true)
     {
         //relative robot position
         vec2f rel_act_robot_pose =
@@ -85,10 +84,41 @@ struct lb_lrf_psm_cfg {
         //relative actual laser position
         vec2f rel_act_lrf_pose =
             rel_act_robot_pose + act_lrf_pose.get_vec2().get_rotate(rel_act_robot_theta);
-        LB_FLOAT rel_act_lrf_theta = rel_act_robot_theta + act_lrf_pose.a;
+        LB_FLOAT rel_act_lrf_theta = lb_normalize_angle(rel_act_robot_theta + act_lrf_pose.a);
 
 
-        //relative reference position
+        //relative position between ref and act laser position
+        vec2f rel_lrf_pose =
+            rel_act_lrf_pose - ref_lrf_pose.get_vec2();
+        LB_FLOAT rel_lrf_theta = lb_normalize_angle(rel_act_lrf_theta - ref_lrf_pose.a);
+
+        std::vector<LB_FLOAT> refranges(ref_ranges);
+        std::vector<LB_FLOAT> actranges(act_ranges);
+
+        //Initialize variables
+        size_t n_point = refranges.size();
+        std::vector<LB_FLOAT> r(n_point, 0);
+        std::vector<LB_FLOAT> fi(n_point, 0);
+        std::vector<LB_FLOAT> new_r(n_point, 0);
+        std::vector<unsigned int> new_bad(n_point, LRF_COND_EMPTY);
+        std::vector<int> index(n_point, 0);
+
+        LB_FLOAT angleStep = pm_fi[1] - pm_fi[0];
+        int small_corr_cnt = 0;
+        int iter = -1;
+        int n = 0;//, n2 = 0;
+        LB_FLOAT dx = 0, dy = 0, dth = 0;
+        LB_FLOAT ax = rel_lrf_pose.x,  ay = rel_lrf_pose.y, ath = rel_lrf_theta;
+        LB_FLOAT delta = 0, x = 0, y = 0, xr = 0, yr = 0;
+        LB_FLOAT abs_err = 0;
+        LB_FLOAT ri = 0;
+        int idx = 0;
+        size_t i = 0;
+        LB_FLOAT C = LB_SQR(0.7 * cfg.scale);
+
+        while((++iter < cfg.max_iter) && (small_corr_cnt < cfg.small_corr_cnt)) {
+
+        }
 
 
         return false;
@@ -100,32 +130,10 @@ struct lb_lrf_psm_cfg {
         //laser scanner coordinates
 
 
-        vec2<T> relLrfPose = actLrfPose - refLaserPose.vec();
-        T relLrfTheta = norm_a_rad(actLrfTheta - refLaserPose.a);
 
-        std::vector<T2> refranges(refScanRanges);
-        std::vector<T2> actranges(actScanRanges);
 
-        //some variables
-        size_t nPts = refranges.size();
-        std::vector<T> r(nPts, 0);
-        std::vector<T> fi(nPts, 0);
-        std::vector<T> new_r(nPts, 0);
-        std::vector<unsigned int> new_bad(nPts, ERR_EMPTY);
-        std::vector<int> index(nPts, 0);
 
-        double angleStep = pm_fi[1] - pm_fi[0];
-        int small_corr_cnt = 0;
-        int iter = -1;
-        int n = 0;//, n2 = 0;
-        T dx = 0, dy = 0, dth = 0;
-        T ax = relLrfPose.x,  ay = relLrfPose.y, ath = relLrfTheta;
-        T delta = 0, x = 0, y = 0, xr = 0, yr = 0;
-        T abs_err = 0;
-        T ri = 0;
-        int idx = 0;
-        size_t i = 0;
-        T C = SQR(0.7 * cfg.scale);
+
 
         while((++iter < cfg.maxIter) && (small_corr_cnt < cfg.smallCorrCnt)) {
 
