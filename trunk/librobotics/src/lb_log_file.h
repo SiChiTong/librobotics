@@ -95,7 +95,7 @@ struct simple_lrf_log : public log_file {
             step++;
         } else {
             //ignore whole line
-            file.ignore(std::numeric_limits<int>::max(), '\n');
+            file.ignore((std::numeric_limits<int>::max)(), '\n');
             return false;
         }
         return true;

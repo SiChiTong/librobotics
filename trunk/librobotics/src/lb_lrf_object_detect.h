@@ -151,7 +151,7 @@ inline bool lb_lrf_arc_fiting(const std::vector<vec2f>& points,
                               const LB_FLOAT is_line_error,
                               const LB_FLOAT is_line_stdev,
                               const LB_FLOAT min_diameter = -1,
-                              const LB_FLOAT max_diameter = std::numeric_limits<LB_FLOAT>::max(),
+                              const LB_FLOAT max_diameter = (std::numeric_limits<LB_FLOAT>::max)(),
                               const int id = -1,
                               const size_t min_point = 10)
 {

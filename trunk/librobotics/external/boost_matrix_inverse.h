@@ -32,14 +32,14 @@ boost::numeric::ublas::matrix<T> gjinverse(const boost::numeric::ublas::matrix<T
 	// a 0x0 matrix.
 	if (size != (int)(m.size2()) || size == (int)0) {
 		singular = true;
-		matrix<T> A(0, 0);
+        boost::numeric::ublas::matrix<T> A(0, 0);
 		return A;
 	}
 
 	// Handle 1x1 matrix edge case as general purpose
 	// inverter below requires 2x2 to function properly.
 	if (size == 1) {
-		matrix<T> A(1, 1);
+		boost::numeric::ublas::matrix<T> A(1, 1);
 		if (m(0, 0) == 0.0) {
 			singular = true;
 			return A;
@@ -52,11 +52,11 @@ boost::numeric::ublas::matrix<T> gjinverse(const boost::numeric::ublas::matrix<T
 	// Create an augmented matrix A to invert. Assign the
 	// matrix to be inverted to the left hand side and an
 	// identity matrix to the right hand side.
-	matrix<T> A(size, 2*size);
-	matrix_range<matrix<T> > Aleft(A, range(0, size), range(0, size));
+	boost::numeric::ublas::matrix<T> A(size, 2*size);
+	matrix_range<boost::numeric::ublas::matrix<T> > Aleft(A, range(0, size), range(0, size));
 	Aleft = m;
-	matrix_range<matrix<T> > Aright(A, range(0, size), range(size, 2*size));
-	Aright = identity_matrix<T>(size);
+	matrix_range<boost::numeric::ublas::matrix<T> > Aright(A, range(0, size), range(size, 2*size));
+	Aright = boost::numeric::ublas::identity_matrix<T>(size);
 
 	// Doing partial pivot
 	for (int kk = 0; kk < size; kk++) {
@@ -81,8 +81,8 @@ boost::numeric::ublas::matrix<T> gjinverse(const boost::numeric::ublas::matrix<T
 					singular = true;
 					return Aleft;
 				} else {
-					matrix_row<matrix<T> > rowk(A, k);
-					matrix_row<matrix<T> > rowl(A, l);
+					matrix_row<boost::numeric::ublas::matrix<T> > rowk(A, k);
+					matrix_row<boost::numeric::ublas::matrix<T> > rowl(A, l);
 					rowk.swap(rowl);
 				}
 			}

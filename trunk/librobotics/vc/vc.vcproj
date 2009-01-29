@@ -192,6 +192,10 @@
 				Name="src"
 				>
 				<File
+					RelativePath="..\src\lb_cimg_draw.h"
+					>
+				</File>
+				<File
 					RelativePath="..\src\lb_common.h"
 					>
 				</File>
@@ -208,7 +212,23 @@
 					>
 				</File>
 				<File
+					RelativePath="..\src\lb_kalman_tracker2.h"
+					>
+				</File>
+				<File
 					RelativePath="..\src\lb_log_file.h"
+					>
+				</File>
+				<File
+					RelativePath="..\src\lb_lrf_basic.h"
+					>
+				</File>
+				<File
+					RelativePath="..\src\lb_lrf_object_detect.h"
+					>
+				</File>
+				<File
+					RelativePath="..\src\lb_lrf_psm.h"
 					>
 				</File>
 				<File
@@ -216,11 +236,19 @@
 					>
 				</File>
 				<File
-					RelativePath="..\src\lb_map2.h"
+					RelativePath="..\src\lb_map2_grid.h"
 					>
 				</File>
 				<File
-					RelativePath="..\src\lb_map2_grid.h"
+					RelativePath="..\src\lb_math_model.h"
+					>
+				</File>
+				<File
+					RelativePath="..\src\lb_mcl.h"
+					>
+				</File>
+				<File
+					RelativePath="..\src\lb_misc_function.h"
 					>
 				</File>
 				<File
@@ -232,11 +260,19 @@
 					>
 				</File>
 				<File
-					RelativePath="..\src\lb_statistic_function.h"
+					RelativePath="..\src\lb_regression.h"
 					>
 				</File>
 				<File
-					RelativePath="..\src\lb_template_function.h"
+					RelativePath="..\src\lb_simple_control.h"
+					>
+				</File>
+				<File
+					RelativePath="..\src\lb_simple_gui.h"
+					>
+				</File>
+				<File
+					RelativePath="..\src\lb_statistic_function.h"
 					>
 				</File>
 				<File
@@ -245,6 +281,10 @@
 				</File>
 				<File
 					RelativePath="..\src\lb_vec2.h"
+					>
+				</File>
+				<File
+					RelativePath="..\src\lb_vfh.h"
 					>
 				</File>
 			</Filter>

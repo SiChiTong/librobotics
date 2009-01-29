@@ -167,7 +167,7 @@ template<typename T>
 inline void lb_lrf_range_threshold_filter(std::vector<T>& ranges,
                                           const T min_range,
                                           const T new_min = 0,
-                                          const T max_range = std::numeric_limits<T>::max(),
+                                          const T max_range = (std::numeric_limits<T>::max)(),
                                           const T new_max = 0)
 {
     size_t n = ranges.size();
@@ -236,7 +236,7 @@ inline int lb_lrf_range_segment(const std::vector<T>& ranges,
                 last_range = ranges[i];
             } else {
                 range_diff = ranges[i] - last_range;
-                if(fabs(range_diff) > threshold) {
+                if(fabs((double)range_diff) > threshold) {
                     //end current segment
                     n_segment++;
 
