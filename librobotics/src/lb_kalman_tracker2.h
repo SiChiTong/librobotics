@@ -295,7 +295,7 @@ struct lb_kalman_tracker2_object {
 
 
     int update(const std::vector<vec2f>& points) {
-        LB_FLOAT closest_dist = std::numeric_limits<LB_FLOAT>::max();
+        LB_FLOAT closest_dist = (std::numeric_limits<LB_FLOAT>::max)();
         vec2f move_dir;
         LB_FLOAT move_dir_size = 0;
         vec2f good_point;
