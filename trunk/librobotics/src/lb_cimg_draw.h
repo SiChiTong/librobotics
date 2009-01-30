@@ -178,6 +178,44 @@ inline void lb_draw_lrf_arc_object_cimg(cimg8u& img,
 }
 
 
+inline void lb_draw_vfh_cimg(cimg8u& img,
+                             const std::vector<LB_FLOAT>& histogram,
+                             const unsigned char color[],
+                             LB_FLOAT scale = 1.0,
+                             LB_FLOAT angle = 0.0,
+                             int x_offset = -1,
+                             int y_offset = -1,
+                             bool draw_line = false,
+                             bool flip_x = false,
+                             bool flip_y = true)
+{
+    using namespace cimg_library;
+
+    lb_cimg_draw_offset_data();
+
+    CImgList<int> points;
+    LB_FLOAT theta_step = (2*M_PI)/histogram.size();
+    vec2f tmp;
+
+    for(size_t i = 0; i < histogram.size(); i++) {
+        tmp = vec2f(1,0).get_rotate(theta_step*i) * histogram[i];
+        if(angle != 0)
+            tmp = tmp.get_rotate(angle);
+
+        lb_cimg_draw_check(tmp);
+
+        img.draw_line(x_offset, y_offset, (int)tmp.x, (int)tmp.y, color, 0.4f);
+
+        if(draw_line)
+            points.push_back(CImg<int>::vector(tmp.x, tmp.y));
+    }
+    if(draw_line) {
+        img.draw_line(points, color, 0.8f);
+    }
+}
+
+
+
 #endif
 
 

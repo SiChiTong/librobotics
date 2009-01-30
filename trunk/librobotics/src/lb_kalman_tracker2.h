@@ -339,7 +339,7 @@ struct lb_kalman_tracker2_object {
                 if(found) {
 //                    LB_PRINT_VAL("Waiting");
                     found_cnt++;
-                    if(found > min_found_frame) {
+                    if(found_cnt > min_found_frame) {
                         nstate = STATE_TRACK;
 //                        LB_PRINT_VAL("go STATE_TRACK");
                         break;
