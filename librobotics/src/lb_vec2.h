@@ -165,12 +165,15 @@ namespace librobotics {
 
         ///Get angle in \f$(-180, 180)\f$ degree range
         T degree() const {
-            return (T) RAD2DEG(atan2(y, x));
+            return (T) LB_RAD2DEG(atan2(y, x));
         }
 
         ///Get angle in \f$(0, 360)\f$ degree range
         T degree_360() const {
-            return (T) RAD2DEG(theta_2PI());
+            T tmp = atan2(y, x);
+            if (tmp < 0)
+                tmp += 2 * M_PI;
+            return LB_RAD2DEG(tmp);
         }
 
         ///Check for zero size vector
@@ -193,10 +196,12 @@ namespace librobotics {
          * \param angle rotate angle
          * \param angle unit select (true for radian, false for degree)
          */
-        vec2 get_rotate(const T angle,const  bool rad = true) const {
-            if (!rad) angle = LB_DEG2RAD(angle);
-            T c = cos(angle);
-            T s = sin(angle);
+        vec2 get_rotate(const T angle, const  bool rad = true) const {
+            T tmp = angle;
+            if (!rad)
+                tmp = LB_DEG2RAD(angle);
+            T c = cos(tmp);
+            T s = sin(tmp);
             return vec2((T) (x * c - y * s), (T) (x * s + y * c));
         }
 
