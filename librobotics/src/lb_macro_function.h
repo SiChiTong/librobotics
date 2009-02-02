@@ -125,5 +125,8 @@
 #define LB_CHK_SIZE4(v0, v1, v2, v3)          (LB_CHK_SIZE3(v0, v1, v2) && LB_CHK_SIZE2(v0, v3))
 #define LB_CHK_SIZE5(v0, v1, v2, v3, v4)      (LB_CHK_SIZE4(v0, v1, v2, v3) && LB_CHK_SIZE2(v0, v4))
 
+//load data from configuration file (external/configfile.h)
+#define LOAD_CFG(x, T)  (x = file.read<T>(#x))
+#define LOAD_N_SHOW_CFG(x, T)  LOAD_CFG(x, T); LB_PRINT_VAR(x);
 
 #endif /* LB_MACRO_FUNCTION_H_ */

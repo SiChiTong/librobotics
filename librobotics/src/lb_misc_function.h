@@ -92,7 +92,7 @@ inline LB_FLOAT lb_normalize_angle(LB_FLOAT a) {
     if (a >= M_PI)
         a -= (2.0 * M_PI);
     return a;
-};
+}
 
 /**
  * Find the minimum angle distance between two input angle in radian unit

@@ -5,7 +5,7 @@
  *      Author: mahisorn
  */
 
-
+#if 0
 #include "librobotics.h"
 
 using namespace std;
@@ -180,3 +180,4 @@ int main(int argc, char* argv[]) {
 
 
 }
+#endif

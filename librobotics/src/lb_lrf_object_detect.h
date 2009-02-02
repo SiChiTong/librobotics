@@ -273,7 +273,8 @@ inline int lb_lrf_leg_detect(const std::vector<vec2f>& points,
                              const LB_FLOAT max_size,
                              const LB_FLOAT leg_arc_ratio,
                              const int id = -1,
-                             const size_t min_points = 10)
+                             const bool do_ratio_check = false,
+                             const size_t min_points = 5)
 {
     size_t n = points.size();
     if(n < min_points) {
@@ -301,10 +302,10 @@ inline int lb_lrf_leg_detect(const std::vector<vec2f>& points,
     LB_FLOAT dist_mc = (middle - center).size();
     bool check_ratio = false;
 
-
     if(dist_lr <= max_size) {
 //        LB_PRINT_VAL("check 1 leg");
         check_ratio = dist_mc > (leg_arc_ratio * dist_lr);
+        check_ratio |= (!do_ratio_check);
 
         if(check_ratio) {
             LB_PRINT_VAL("add 1 leg");
@@ -323,7 +324,6 @@ inline int lb_lrf_leg_detect(const std::vector<vec2f>& points,
 
     } else {
 //        LB_PRINT_VAL("check 2 leg");
-        //check 2 leg
         int cnt = 0;
         vec2f right_middle = points[n >> 2];
         vec2f right_center = (right + middle) * 0.5;
@@ -331,7 +331,7 @@ inline int lb_lrf_leg_detect(const std::vector<vec2f>& points,
         LB_FLOAT dist_rm_rc = (right_middle - right_center).size();
 
         check_ratio = dist_rm_rc > (leg_arc_ratio * dist_mr);
-
+        check_ratio |= (!do_ratio_check);
         if(check_ratio) {
             //add right leg
             lrf_object leg;
@@ -348,13 +348,14 @@ inline int lb_lrf_leg_detect(const std::vector<vec2f>& points,
             warn("%s: right leg ratio fail", __FUNCTION__);
         }
 
+
         vec2f left_middle = points[(n >> 2) + (n >> 1)];
         vec2f left_center = (left + middle) * 0.5;
         LB_FLOAT dist_ml = (middle - left).size();
         LB_FLOAT dist_lm_lc = (left_middle - left_center).size();
 
         check_ratio = dist_lm_lc > (leg_arc_ratio * dist_ml);
-
+        check_ratio |= (!do_ratio_check);
         if(check_ratio) {
             //add left leg
             lrf_object leg;
@@ -394,7 +395,7 @@ inline bool lb_lrf_group_detect(const std::vector<vec2f>& points,
                                 const LB_FLOAT min_size,
                                 const LB_FLOAT max_size,
                                 const int id = -1,
-                                const size_t min_points = 10)
+                                const size_t min_points = 5)
 {
     size_t n = points.size();
     if(n < min_points) {
@@ -445,7 +446,8 @@ inline bool lb_lrf_group_detect(const std::vector<vec2f>& points,
 inline int lb_lrf_object_human_check(std::vector<lrf_object>& objects,
                                      const LB_FLOAT max_leg_distance,
                                      const LB_FLOAT min_group_size,
-                                     const LB_FLOAT max_group_size)
+                                     const LB_FLOAT max_group_size,
+                                     bool allow_one_leg = false)
 {
     size_t n = objects.size();
 
@@ -503,10 +505,10 @@ inline int lb_lrf_object_human_check(std::vector<lrf_object>& objects,
     //check all orphan leg
     int pass = 0;
     int group_idx = -1;
-    while(!leg_object.empty()) {
+    while(!leg_object.empty() && allow_one_leg) {
         //check 1 leg condition
         it = leg_object.begin();
-        pass = 2;
+        pass = -10;
         group_idx = -1;
         for(size_t i = 0; i < n; i++) {
             if(objects[i].segment_id == (*it).segment_id) {
