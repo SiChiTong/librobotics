@@ -60,6 +60,9 @@
 #include <boost/numeric/ublas/io.hpp>
 #include "external/boost_matrix_inverse.h"
 
+//external tools
+#include "external/configfile.h"
+
 
 #if (librobotics_use_boost == 1)
 

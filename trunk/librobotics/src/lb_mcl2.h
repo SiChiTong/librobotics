@@ -59,11 +59,11 @@ struct lb_mcl2_particle {
  * Configuration for MCL on grid2 map
  */
 struct lb_mcl_grid2_configuration {
-    std::string mapfile;    //!< map file name
-    pose2f map_offset;    //!< map offset
-    vec2f map_center;     //!< map center
-    LB_FLOAT map_res;              //!< map resolution
-    LB_FLOAT map_angle_res;        //!< pre-compute ray casting angle resolution
+    std::string mapfile;        //!< map file name
+    pose2f map_offset;          //!< map offset
+    vec2f map_center;           //!< map center
+    LB_FLOAT map_res;           //!< map resolution
+    LB_FLOAT map_angle_res;     //!< pre-compute ray casting angle resolution
 
     int n_particles;            //!< number of particles
     LB_FLOAT min_particels;     //!< in percentage of n_particles \f$(0.0, 1.0)\f$
@@ -82,48 +82,39 @@ struct lb_mcl_grid2_configuration {
      * @param filename
      */
     void load(const std::string& filename) {
-//        std::ifstream file;
-//        file.open(filename.c_str());
-//        if(!file.is_open()) {
-//            throw LibRoboticsIOException("Cannot load file %s in %s", filename.c_str(), __FUNCTION__);
-//        }
-//
-//        std::string tmp;    //dummy data for load_cfg_from_text_file macro
-//        std::cout << "======= mcl_grid2::configuration =======\n";
-//        load_cfg_from_text_file(mapfile, file);
-//        load_cfg_from_text_file(map_offset, file);
-//        load_cfg_from_text_file(map_center, file);
-//        load_cfg_from_text_file(map_res, file);
-//        load_cfg_from_text_file(map_angle_res, file);
-//        map_angle_res = LB_DEG2RAD(map_angle_res);
-//
-//        //particles settings
-//        load_cfg_from_text_file(n_particles, file);
-//        load_cfg_from_text_file(min_particels, file);
-//        load_cfg_from_text_file(a_slow, file);
-//        load_cfg_from_text_file(a_fast, file);
-//        load_cfg_from_text_file(v_factor, file);
-//
-//        //motion
-//        load_cfg_from_text_file(motion_var[0], file);
-//        load_cfg_from_text_file(motion_var[1], file);
-//        load_cfg_from_text_file(motion_var[2], file);
-//        load_cfg_from_text_file(motion_var[3], file);
-//        load_cfg_from_text_file(motion_var[4], file);
-//        load_cfg_from_text_file(motion_var[5], file);
-//
-//        //measurement
-//        load_cfg_from_text_file(z_max_range, file);
-//        load_cfg_from_text_file(z_hit_var, file);
-//        load_cfg_from_text_file(z_short_rate, file);
-//        load_cfg_from_text_file(z_weight[0], file);
-//        load_cfg_from_text_file(z_weight[1], file);
-//        load_cfg_from_text_file(z_weight[2], file);
-//        load_cfg_from_text_file(z_weight[3], file);
-//        std::cout << "========================================\n";
-//
-//
-//        file.close();
+        try {
+            ConfigFile file(filename);
+            LB_PRINT_VAL("============== MCL Configuration ==============");
+            LOAD_N_SHOW_CFG(mapfile, std::string);
+            LOAD_N_SHOW_CFG(map_offset, pose2f);
+            LOAD_N_SHOW_CFG(map_center, vec2f);
+            LOAD_N_SHOW_CFG(map_res, LB_FLOAT);
+            LOAD_N_SHOW_CFG(map_angle_res, LB_FLOAT);
+
+            LOAD_N_SHOW_CFG(n_particles, int);
+            LOAD_N_SHOW_CFG(min_particels, LB_FLOAT);
+            LOAD_N_SHOW_CFG(a_slow, LB_FLOAT);
+            LOAD_N_SHOW_CFG(a_fast, LB_FLOAT);
+            LOAD_N_SHOW_CFG(v_factor, LB_FLOAT);
+            LOAD_N_SHOW_CFG(motion_var[0], LB_FLOAT);
+            LOAD_N_SHOW_CFG(motion_var[1], LB_FLOAT);
+            LOAD_N_SHOW_CFG(motion_var[2], LB_FLOAT);
+            LOAD_N_SHOW_CFG(motion_var[3], LB_FLOAT);
+            LOAD_N_SHOW_CFG(motion_var[4], LB_FLOAT);
+            LOAD_N_SHOW_CFG(motion_var[5], LB_FLOAT);
+
+            LOAD_N_SHOW_CFG(map_var, LB_FLOAT);
+            LOAD_N_SHOW_CFG(z_max_range, LB_FLOAT);
+            LOAD_N_SHOW_CFG(z_hit_var, LB_FLOAT);
+            LOAD_N_SHOW_CFG(z_short_rate, LB_FLOAT);
+            LOAD_N_SHOW_CFG(z_weight[0], LB_FLOAT);
+            LOAD_N_SHOW_CFG(z_weight[1], LB_FLOAT);
+            LOAD_N_SHOW_CFG(z_weight[2], LB_FLOAT);
+            LOAD_N_SHOW_CFG(z_weight[3], LB_FLOAT);
+            LB_PRINT_VAL("===============================================");
+        } catch (std::string& e) {
+            LB_PRINT_STREAM << e;
+        }
     }
 };
 

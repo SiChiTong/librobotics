@@ -77,6 +77,18 @@ namespace librobotics {
 
 #if (librobotics_use_cimg == 1)
 
+static const unsigned char
+    red[] = {255, 0, 0}, green[] = {0, 255, 0}, blue[] = {0, 0, 255},
+    yellow[] = {255, 255, 0}, margenta[] = {255, 0, 255}, cyan[] = {0, 255, 255},
+    black[] = {0, 0 ,0}, gray[] = {127, 127, 127},
+    red2[] = {128, 0, 0}, green2[] = {0, 128, 0}, blue2[] = {0, 0, 128},
+    yellow2[] = {128, 128, 0}, margenta2[] = {128, 0, 128}, cyan2[] = {0, 128, 128},
+    orage[] = {255, 128, 0 },
+
+
+    white[] = {255, 255, 255};
+
+
 inline void lb_draw_points_cimg(cimg8u& img,
                                 const std::vector<vec2f>& points,
                                 const unsigned char color[],

@@ -46,6 +46,7 @@
 #include "src/lb_statistic_function.h"
 #include "src/lb_data_type.h"
 #include "src/lb_math_model.h"
+#include "src/lb_particle_function.h"
 
 //low level control function
 #include "src/lb_simple_control.h"
@@ -294,84 +295,11 @@
 //     * Definition of the LibRobotics: Particle filter Functions
 //     *
 //     -------------------------------------------------------------------------*/
-//    template<typename T>
-//    int pf_max_weight_index(const std::vector<T>& p) {
-//        double max_w = -1;
-//        int index = 0;
-//        for(size_t i = 0; i < p.size(); i++ ) {
-//            if(p[i].w > max_w) {
-//                index = i;
-//                max_w = p[i].w;
-//            }
-//        }
-//        return index;
-//    }
+
 //
-//    template<typename T>
-//    bool pf_weight_compare(const T& p1, const T& p2) {
-//       return (p1.w < p2.w);
-//    }
+
 //
-//    template<typename T>
-//    void pf_normalize_weight(std::vector<T>& p) {
-//        double sum = 0;
-//        for(size_t i = 0; i < p.size(); i++ ) {
-//            sum += p[i].w;
-//        }
-//        for(size_t i = 0; i < p.size(); i++ ) {
-//            p[i].w /= sum;
-//        }
-//    }
-//
-//    template<typename T>
-//    bool pf_stratified_resample(std::vector<T>& p, int n_min) {
-//        pf_normalize_weight(p);
-//        size_t n = p.size();
-//
-//        if(n < 2)
-//            return false;
-//
-//        double square_sum = 0;
-//
-//        //square sum
-//        for(size_t i = 0; i < n; i++) {
-//            square_sum += LB_SQR(p[i].w);
-//        }
-//
-//        int n_eff = (int)(1.0/square_sum);
-//        if(n_eff > n_min)
-//            return false;
-//
-//        std::vector<double> cum_sum_w(n, 0.0);
-//        std::vector<int> keep(n, 0);
-//        std::vector<double> select(n, 0.0);
-//
-//        //cumulative sum
-//        cum_sum_w[0] = p[0].w;
-//        for(size_t i = 1; i < n; i++) {
-//            cum_sum_w[i] = cum_sum_w[i-1] + p[i].w;
-//        }
-//
-//        stat_stratified_random(select, n);
-//        size_t ctr = 0;
-//        for(size_t i = 0; i < n; i++) {
-//            while((ctr < n) && (select[ctr] < cum_sum_w[i])) {
-//                keep[ctr] = i;
-//                ctr++;
-//            }
-//        }
-//
-//        std::vector<T> p_tmp(n);
-//        for(size_t i = 0; i < n; i++) {
-//            p_tmp[i] = p[keep[i]];
-//        }
-//
-//        for(size_t i = 0; i < n; i++) {
-//            p[i] = p_tmp[i];
-//            p[i].w = 1.0/n;
-//        }
-//        return true;
-//    }
+
 //
 
 
