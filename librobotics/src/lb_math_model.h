@@ -98,6 +98,66 @@ inline pose2f lb_velocity_motion_model_sample(const vec2f& ut,
     return pose2f(x, y, a);
 }
 
+/**
+ * Closed form velocity motion model for compute \f$p(x_t|u_t, x_{t-1})\f$
+ * @param pt    hypothesized pose \f$(x', y', \theta')^T\f$
+ * @param ut    control \f$(v, w)^T\f$
+ * @param p     initial pose \f$(x, y, \theta)^T\f$
+ * @param dt    update time
+ * @param var   robot specific motion error parameters \f$(\sigma_1 ... \sigma_6) \f$
+ * @return \f$p(x_t|u_t, x_{t-1})\f$
+ */
+
+inline LB_FLOAT velocity_motion(pose2f pt,
+                                vec2f ut,
+                                pose2f p,
+                                LB_FLOAT dt,
+                                LB_FLOAT var[6])
+{
+    LB_FLOAT x_x = p.x - pt.x;
+    LB_FLOAT y_y = p.y - pt.y;
+    LB_FLOAT tmp0 = ((x_x*cos(p.a)) + (y_y*sin(p.a)));
+    LB_FLOAT tmp1 = ((y_y*cos(p.a)) - (x_x*sin(p.a)));
+    LB_FLOAT u, xx, yy, rr, aa, v, w;
+
+    u = 0.0;
+    if(tmp1 != 0) {
+        u = 0.5 * (tmp0/tmp1);
+    }
+
+    //compute center and radius of the circle
+    xx = ((p.x + pt.x) * 0.5) + (u*(p.y - pt.y));
+    yy = ((p.y + pt.y) * 0.5) + (u*(pt.x - p.x));
+    rr = sqrt(LB_SQR(pt.x - xx) + LB_SQR(pt.y - yy));
+
+    aa = lb_minimum_angle_distance(atan2(p.y - yy, p.x - xx), atan2(pt.y - yy, pt.x - xx));
+    v = aa/dt * rr;
+
+    if(ut.x >= 0) {
+        if(LB_SIGN(yy) == LB_SIGN(aa))
+            v = LB_SIGN(ut.x) * fabs(v);   //check sign with control input
+        else
+            return 0;
+    } else {
+        if(LB_SIGN(yy) != LB_SIGN(aa))
+            v = LB_SIGN(ut.x) * fabs(v);   //check sign with control input
+        else
+            return 0;
+    }
+
+    w = aa/dt;
+
+    LB_FLOAT v2 = v*v;
+    LB_FLOAT w2 = w*w;
+    LB_FLOAT r = lb_minimum_angle_distance(w, (pt.a - p.a)/dt);
+
+
+    LB_FLOAT p0 = lb_pdf_normal_dist(var[0]*v2 + var[1]*w2, 0.0, v - ut.x);
+    LB_FLOAT p1 = lb_pdf_normal_dist(var[2]*v2 + var[3]*w2, 0.0, lb_minimum_angle_distance(ut.y, w));
+    LB_FLOAT p2 = lb_pdf_normal_dist(var[4]*v2 + var[5]*w2, 0.0, r);
+
+    return p0 * p1 * p2;
+}
 
 
 /**
@@ -130,6 +190,40 @@ inline pose2f lb_odometry_motion_model_sample(const pose2f& u_pt,
     LB_FLOAT y = p.y + ntran*sin(p.a + nrot1);
     LB_FLOAT a = lb_normalize_angle(p.a + nrot1 + nrot2);
     return pose2f(x, y, a);
+}
+
+/**
+ * Odometry motion model
+ * @param pt
+ * @param u_pt
+ * @param u_p
+ * @param p
+ * @param var
+ * @return
+ */
+LB_FLOAT odometry_motion(pose2f pt,
+                         pose2f u_pt,
+                         pose2f u_p,
+                         pose2f p,
+                         LB_FLOAT var[6])
+{
+    LB_FLOAT rot1 = lb_minimum_angle_distance(u_p.a, atan2(u_pt.y - u_p.y, u_pt.x - u_p.x));
+    LB_FLOAT tran = (u_pt.get_vec2() - u_p.get_vec2()).size();
+    LB_FLOAT rot2 = lb_minimum_angle_distance(rot1, lb_minimum_angle_distance(u_p.a, u_pt.a));
+
+    LB_FLOAT nrot1 = lb_minimum_angle_distance(p.a, atan2(pt.y - p.y, pt.x - p.x));
+    LB_FLOAT ntran = (pt.get_vec2() - p.get_vec2()).size();
+    LB_FLOAT nrot2 = lb_minimum_angle_distance(nrot1, lb_minimum_angle_distance(p.a, pt.a));
+
+    LB_FLOAT nrot1_sqr = LB_SQR(nrot1);
+    LB_FLOAT ntran_sqr = LB_SQR(ntran);
+    LB_FLOAT nrot2_sqr = LB_SQR(nrot2);
+
+    LB_FLOAT p0 = lb_pdf_normal_dist(var[0]*nrot1_sqr + var[1]*ntran_sqr, 0.0, lb_minimum_angle_distance(nrot1, rot1));
+    LB_FLOAT p1 = lb_pdf_normal_dist(var[2]*ntran_sqr + var[3]*nrot1_sqr + var[3]*nrot2_sqr , 0.0, tran - ntran);
+    LB_FLOAT p2 = lb_pdf_normal_dist(var[0]*nrot2_sqr + var[1]*ntran_sqr, 0.0, lb_minimum_angle_distance(nrot2, rot2));
+
+    return p0 * p1 * p2;
 }
 
 }

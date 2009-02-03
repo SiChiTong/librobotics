@@ -33,6 +33,7 @@
 #include "lb_common.h"
 #include "lb_exception.h"
 #include "lb_data_type.h"
+#include "lb_map2_grid.h"
 
 namespace librobotics {
 
@@ -59,10 +60,8 @@ struct lb_mcl2_particle {
  * Configuration for MCL on grid2 map
  */
 struct lb_mcl_grid2_configuration {
-    std::string mapfile;        //!< map file name
-    pose2f map_offset;          //!< map offset
-    vec2f map_center;           //!< map center
-    LB_FLOAT map_res;           //!< map resolution
+    std::string map_config_file;         //!< map configuration file
+    std::string map_image_file;          //!< map image files
     LB_FLOAT map_angle_res;     //!< pre-compute ray casting angle resolution
 
     int n_particles;            //!< number of particles
@@ -85,10 +84,8 @@ struct lb_mcl_grid2_configuration {
         try {
             ConfigFile file(filename);
             LB_PRINT_VAL("============== MCL Configuration ==============");
-            LOAD_N_SHOW_CFG(mapfile, std::string);
-            LOAD_N_SHOW_CFG(map_offset, pose2f);
-            LOAD_N_SHOW_CFG(map_center, vec2f);
-            LOAD_N_SHOW_CFG(map_res, LB_FLOAT);
+            LOAD_N_SHOW_CFG(map_config_file, std::string);
+            LOAD_N_SHOW_CFG(map_image_file, std::string);
             LOAD_N_SHOW_CFG(map_angle_res, LB_FLOAT);
 
             LOAD_N_SHOW_CFG(n_particles, int);
@@ -115,6 +112,24 @@ struct lb_mcl_grid2_configuration {
         } catch (std::string& e) {
             LB_PRINT_STREAM << e;
         }
+    }
+};
+
+
+/**
+ * Data for MCL on grid2 map
+ */
+struct lb_mcl_grid2_data {
+    std::vector<lb_mcl2_particle> p;         //!< current particle set
+    std::vector<lb_mcl2_particle> p_tmp;     //!< temporary particle set
+    lb_grid2_data map;                       //!< gird map
+    pose2f last_odo_pose;                    //!< last odometry position
+
+    void initialize(const lb_mcl_grid2_configuration& cfg) {
+        p.resize(cfg.n_particles);
+        p_tmp.resize(cfg.n_particles);
+        map.load_config(cfg.map_config_file);
+        map.load_map_image(cfg.map_image_file);
     }
 };
 

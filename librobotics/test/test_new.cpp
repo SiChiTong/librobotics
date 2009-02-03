@@ -12,15 +12,6 @@ using namespace std;
 using namespace librobotics;
 using namespace cimg_library;
 
-const unsigned char
-    red[] = { 255,0,0 }, green[] = { 0,255,0 }, blue[] = { 0,0,255 },
-    red_drak[] = { 127,0,0 }, green_drak[] = { 0,127,0 }, blue_drak[] = { 0,0,127 },
-    cyan[] = {0, 255, 255}, yellow[] = {255, 255, 0}, margenta[] = {255, 0, 255},
-    cyan_drak[] = {0, 127, 127}, yellow_dark[] = {127, 127, 0},
-    black[] = { 0,0,0 },
-    gray[] = { 127, 127, 127 },
-    white[] = { 255,255,255 };
-
 
 int main(int argc, char* argv[]) {
 
@@ -124,7 +115,7 @@ int main(int argc, char* argv[]) {
                             lb_draw_lrf_line_object_cimg(img, objects[l], white, 80);
                             break;
                         case LRF_OBJ_ARC:
-                            lb_draw_lrf_arc_object_cimg(img, objects[l], green_drak, 80);
+                            lb_draw_lrf_arc_object_cimg(img, objects[l], green2, 80);
                             break;
                         default:
                             break;

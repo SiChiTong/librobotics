@@ -226,7 +226,87 @@ inline void lb_draw_vfh_cimg(cimg8u& img,
     }
 }
 
+template<typename P, typename M>
+inline void lb_draw_paticle2(cimg8u& img,
+                             const std::vector<P>& p,
+                             const M& map,
+                             const unsigned char color[],
+                             int size_in_pixel,
+                             LB_FLOAT scale = 1.0,
+                             LB_FLOAT angle = 0.0,
+                             int x_offset = -1,
+                             int y_offset = -1,
+                             bool draw_dir = false,
+                             bool flip_x = false,
+                             bool flip_y = true )
+{
+    lb_cimg_draw_offset_data();
 
+    vec2i grid_pose;
+    vec2f tmp, dir;
+    for(size_t i = 0; i < p.size(); i++) {
+        map.get_grid_coordinate(p[i].p.x, p[i].p.y, grid_pose);
+
+        tmp = grid_pose * scale;
+        if(angle != 0)
+            tmp = tmp.get_rotate(angle);
+
+        if(flip_x) tmp.x = dimx - tmp.x;
+        if(flip_y) tmp.y = dimy - tmp.y;
+
+
+        img.draw_circle(tmp.x + x_offset, tmp.y + y_offset, size_in_pixel*scale, color);
+
+        if(draw_dir) {
+            dir = vec2f(size_in_pixel * 2.0, 0.0).get_rotate(p[i].p.a);
+            if(angle != 0)
+                dir = dir.get_rotate(angle);
+            lb_cimg_draw_check(dir);
+            dir += tmp;
+            img.draw_line(tmp.x, tmp.y, dir.x, dir.y, black);
+        }
+    }
+}
+
+template<typename M>
+inline void lb_draw_map2_grid_ray_cast(cimg8u& img,
+                                       const vec2i& grid,
+                                       const M& map,
+                                       const unsigned char color[],
+                                       LB_FLOAT scale = 1.0,
+                                       LB_FLOAT angle = 0.0,
+                                       int x_offset = -1,
+                                       int y_offset = -1,
+                                       bool draw_dir = false,
+                                       bool flip_x = false,
+                                       bool flip_y = true )
+{
+    if(!map.is_inside(grid.x, grid.y)) return;
+
+    lb_cimg_draw_offset_data();
+
+    LB_FLOAT r, rad;
+    vec2f tmp;
+    vec2i tmp2;
+    for(size_t i = 0; i < map.ray_casting_cache[grid.x][grid.y].size(); i++) {
+        r = (map.ray_casting_cache[grid.x][grid.y][i]/map.resolution);
+        rad = map.angle_res * i;
+        tmp.x = r * cos(rad);
+        tmp.y = r * sin(rad);
+
+        if(angle != 0)
+            tmp = tmp.get_rotate(angle);
+        lb_cimg_draw_check(tmp);
+
+        tmp2 = grid * scale;
+        if(flip_x) tmp2.x = dimx - tmp2.x;
+        if(flip_y) tmp2.y = dimy - tmp2.y;
+
+        tmp += tmp2;
+        img.draw_line(tmp2.x, tmp2.y, tmp.x, tmp.y, color, 0.8);
+    }
+
+}
 
 #endif
 

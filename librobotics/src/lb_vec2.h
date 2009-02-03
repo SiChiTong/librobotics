@@ -196,8 +196,8 @@ namespace librobotics {
          * \param angle rotate angle
          * \param angle unit select (true for radian, false for degree)
          */
-        vec2 get_rotate(const T angle, const  bool rad = true) const {
-            T tmp = angle;
+        vec2 get_rotate(const LB_FLOAT angle, const  bool rad = true) const {
+            LB_FLOAT tmp = angle;
             if (!rad)
                 tmp = LB_DEG2RAD(angle);
             T c = cos(tmp);
@@ -210,7 +210,7 @@ namespace librobotics {
          * \param angle rotate angle
          * \param angle unit select (true for radian, false for degree)
          */
-        vec2& rotate(const T angle, const bool rad = true) {
+        vec2& rotate(const LB_FLOAT angle, const bool rad = true) {
             LB_FLOAT a = angle;
             if (!rad)
                 a = LB_DEG2RAD(angle);
