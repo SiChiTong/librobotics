@@ -68,7 +68,7 @@ namespace librobotics {
          * @param y grid coordinate
          * @return true if (x,y) is inside the map
          */
-        inline bool is_inside(int x, int y) {
+        inline bool is_inside(int x, int y) const {
             return (x >= 0) && (x < size.x) && (y >= 0) && (y < size.y);
         }
 
@@ -79,7 +79,7 @@ namespace librobotics {
          * @param pts
          * @return true if (x,y) is inside the map
          */
-        inline bool get_grid_position(int x, int y, vec2f& pts) {
+        inline bool get_grid_position(int x, int y, vec2f& pts) const {
             if(is_inside(x, y)) {
                 pts.x = ((x - center.x) * resolution) + offset.x;
                 pts.y = ((y - center.y) * resolution) + offset.y;
@@ -96,7 +96,7 @@ namespace librobotics {
          * @param v result in grid coordinate
          * @return true if (x,y) is inside the map
          */
-        inline bool get_grid_coordinate(LB_FLOAT x, LB_FLOAT y, vec2i& v) {
+        inline bool get_grid_coordinate(LB_FLOAT x, LB_FLOAT y, vec2i& v) const {
             v.x = center.x + (int)LB_ROUND((x-offset.x)/resolution);
             v.y = center.y + (int)LB_ROUND((y-offset.y)/resolution);
             if(is_inside(v.x, v.y))
@@ -106,7 +106,7 @@ namespace librobotics {
             }
         }
 
-        bool get_random_pts(vec2f& pts, LB_FLOAT max_mapprob = 0.0, int retry = 100) {
+        inline bool get_random_pts(vec2f& pts, LB_FLOAT max_mapprob = 0.0, int retry = 100) const {
             int x, y;
             bool pass = false;
             do {
@@ -282,7 +282,7 @@ namespace librobotics {
             LB_PRINT_STREAM << "Move from: " << start << " (" << grid_start
                             <<  ") to: " << goal << "  (" << grid_goal << ")\n";
 
-
+#warning "not implement"
 
             return true;
         }
@@ -458,8 +458,8 @@ namespace librobotics {
          * @return image in CImg<unsigned char> format.
          */
         inline cimg8u get_image(bool flip_x = false,
-                         bool flip_y = true,
-                         bool invert = true)
+                                bool flip_y = true,
+                                bool invert = true)
         {
             using namespace cimg_library;
             cimg8u img(size.x, size.y, 1, 3, 0);
@@ -467,7 +467,7 @@ namespace librobotics {
             int x, y;
             for(int i = 0; i < size.x; i++) {
                 for(int j = 0; j < size.y; j++) {
-                    v = (unsigned char)(255 - (mapprob[i][j] * 255));
+                    v = (unsigned char)(mapprob[i][j] * 255);
                     x = i;
                     y = j;
 

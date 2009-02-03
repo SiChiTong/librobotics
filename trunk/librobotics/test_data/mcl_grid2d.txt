@@ -1,9 +1,7 @@
-mapfile = ../test_data/003_01.png  				#map file name ../test_data/map_4F_5cm_1px_upper_lrf.png  	#map file name
-map_offset = 0.0 0.0 0.0						#map offset
-map_center = 0.0 0.0							#map center
-map_res = 0.028571429							#map resolution (m/px)
-map_angle_res = 2.0								#ray casting cache angle pre step (degree)
-n_particles = 5000								#number of particles
+map_config_file = ../test_data/grid2_map.cfg 	#map configuration file
+map_image_file = ../test_data/grid2_map.png  	#map image file
+map_angle_res = 0.034906585						#ray casting cache angle per step
+n_particles = 100								#number of particles
 min_particels = 0.3								#resample percentage
 a_slow = 0.001									#slow decay rate
 a_fast = 0.1									#fast decay rate

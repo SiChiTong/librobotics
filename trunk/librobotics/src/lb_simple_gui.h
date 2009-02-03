@@ -76,7 +76,6 @@ struct simple_cimg_gui {
             if(wheel_zoom < 1) wheel_zoom = 1;
 
             button = disp.button;
-            LB_PRINT_VAR(button);
             switch(button) {
                 case 0: //release all btn
 
@@ -113,7 +112,7 @@ struct simple_cimg_gui {
 //            LB_PRINT_VAR(diff_wheel);
 //            LB_PRINT_VAR(button);
 //            LB_PRINT_VAR(last_button);
-            LB_PRINT_VAR(wheel_zoom);
+//            LB_PRINT_VAR(wheel_zoom);
         }
     }
 

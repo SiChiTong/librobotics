@@ -31,7 +31,9 @@
 #define LB_PARTICLE_FUNCTION_H_
 
 #include "lb_common.h"
+#include "lb_exception.h"
 #include "lb_data_type.h"
+
 
 namespace librobotics {
 
@@ -112,6 +114,108 @@ bool lb_particle_stratified_resample(std::vector<T>& p, int n_min) {
         p[i].w = 1.0/n;
     }
     return true;
+}
+
+template<typename P, typename M>
+void lb_init_particle2(std::vector<P>& p,
+                       const M& map,
+                       int mode,
+                       pose2f start,
+                       LB_FLOAT param0,
+                       LB_FLOAT param1)
+{
+    size_t i = 0;
+    switch(mode) {
+        case 0: //all at start point
+            for(i = 0; i < p.size(); i++)
+                p[i].p = start;
+            break;
+        case 1: //case 0 with uniform random angle
+            for(i = 0; i < p.size(); i++) {
+                p[i].p.x = start.x;
+                p[i].p.y = start.y;
+                p[i].p.a = lb_crand() * M_PI;
+            }
+           break;
+       case 2: //all in circle uniform random  at start point with start angle
+       {
+           LB_FLOAT r, a;
+           for(i = 0; i < p.size(); i++) {
+               lb_sample_circle_uniform_dist(a, r);
+               p[i].p.x = start.x + (r * param0 * cos(a));
+               p[i].p.y = start.y + (r * param0 * sin(a));
+               p[i].p.a = start.a;
+           }
+           break;
+       }
+       case 3: //case 2 with uniform random angle
+       {
+           LB_FLOAT r, a;
+           for(i = 0; i < p.size(); i++) {
+               lb_sample_circle_uniform_dist(a, r);
+               p[i].p.x = start.x + (r * param0 * cos(a));
+               p[i].p.y = start.y + (r * param0 * sin(a));
+               p[i].p.a = lb_crand() * M_PI;
+           }
+           break;
+       }
+       case 4: //case 2 with normal distribution random angle around start angle
+       {
+           LB_FLOAT r, a;
+           for(i = 0; i < p.size(); i++) {
+               lb_sample_circle_uniform_dist(a, r);
+               p[i].p.x = start.x + (r * param0 * cos(a));
+               p[i].p.y = start.y + (r * param0 * sin(a));
+               p[i].p.a = lb_normalize_angle(start.a + lb_sample_normal_dist(param1));
+           }
+           break;
+       }
+       case 5: //all uniform random over map with start angle
+       {
+           vec2f pts;
+           for(i = 0; i < p.size(); i++) {
+               map.get_random_pts(pts);
+               p[i].p.x = pts.x;
+               p[i].p.y = pts.y;
+               p[i].p.a = start.a;
+           }
+           break;
+       }
+       case 6: //case 5 with uniform random angle
+       {
+           vec2f pts;
+           for(i = 0; i < p.size(); i++) {
+               map.get_random_pts(pts);
+               p[i].p.x = pts.x;
+               p[i].p.y = pts.y;
+               p[i].p.a = lb_crand() * M_PI;
+           }
+           break;
+       }
+       case 7: //case 5 with normal distribution random angle around start angle
+       {
+           vec2f pts;
+           for(i = 0; i < p.size(); i++) {
+               map.get_random_pts(pts);
+               p[i].p.x = pts.x;
+               p[i].p.y = pts.y;
+               p[i].p.a = lb_normalize_angle(start.a + lb_sample_normal_dist(param1));
+           }
+           break;
+       }
+       case 8:
+       default:
+       {
+           throw LibRoboticsWarningException("This case are not yet implement in %s", __FUNCTION__);
+           break;
+       }
+   }//switch
+
+   //initialize weight
+   for(i = 0; i < p.size(); i++) {
+       p[i].w = 1.0/p.size();
+   }
+
 }
 
 
