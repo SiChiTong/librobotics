@@ -130,9 +130,67 @@ struct lb_mcl_grid2_data {
         p_tmp.resize(cfg.n_particles);
         map.load_config(cfg.map_config_file);
         map.load_map_image(cfg.map_image_file);
+
+        //compute ray_cast cache
+        map.compute_ray_casting_cache(cfg.map_angle_res);
+
     }
 };
 
+
+inline int lb_mcl_grid2_update_with_odomety(const lb_mcl_grid2_configuration& cfg,
+                                            const std::vector<vec2f>& z,
+                                            const pose2f& odo_pose,
+                                            lb_mcl_grid2_data& data)
+{
+    for(int n = 0; n < cfg.n_particles; n++) {
+        //predict position
+        data.p_tmp[n].p =
+            lb_odometry_motion_model_sample(odo_pose,
+                                            data.last_odo_pose,
+                                            data.p[n].p,
+                                            cfg.motion_var);
+        //check measurement
+        vec2i grid_coor;
+        LB_FLOAT sense_angle = 0;
+        int sense_idx = 0;
+        LB_FLOAT zp;
+
+        if(data.map.get_grid_coordinate(data.p_tmp[n].p.x, data.p_tmp[n].p.y, grid_coor)) {
+            if(data.map.ray_casting_cache[grid_coor.x][grid_coor.y].size() != 0) {
+                data.p_tmp[n].w = 1.0;
+                for(size_t i = 0; i < z.size(); i++) {
+                //find nearest measurement in pre-computed ray casting
+
+                    //compute sense angle (convert from local coordinate to global coordinate)
+                    sense_angle = lb_normalize_angle(z[i].theta() + data.p_tmp[n].p.a);
+
+                    //get index
+                    sense_idx = (int)(sense_angle/data.map.angle_res);
+                    if(sense_idx < 0) sense_idx += data.map.angle_step;
+
+                    //compute PDF (can speed up by lookup table)
+                    zp = lb_beam_range_finder_measurement_model(z[i].size(),
+                                                                data.map.ray_casting_cache[grid_coor.x][grid_coor.y][sense_idx],
+                                                                cfg.z_max_range,
+                                                                cfg.z_hit_var,
+                                                                cfg.z_short_rate,
+                                                                cfg.z_weight);
+                    data.p_tmp[n].w *= zp;
+                }
+            } else {
+                data.p_tmp[n].w = 0;
+            }
+
+        } else {
+            data.p_tmp[n].w = 0;
+        }
+        data.p[n].p = data.p_tmp[n].p;
+        data.p[n].w = data.p_tmp[n].w;
+    }
+    data.last_odo_pose = odo_pose;
+    return 0;
+}
 
 
 

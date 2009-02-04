@@ -51,7 +51,8 @@ struct simple_cimg_gui {
     simple_cimg_gui(int w, int h,
                     const std::string& title,
                     bool flip_mouse_x = false,
-                    bool flip_mouse_y = true)
+                    bool flip_mouse_y = true,
+                    bool close_on_esc = true)
         :  disp(w, h, title.c_str(), 0),
            flip_x(false), flip_y(true),
            wheel(0), diff_wheel(0), last_wheel(0),
@@ -62,6 +63,11 @@ struct simple_cimg_gui {
 
     void process_event( ) {
         end_process();
+        if(disp.is_keyESC) {
+            disp.close();
+            disp.is_keyESC = false;
+        }
+
         if(disp.mouse_x > 0 && disp.mouse_y > 0) {
             mouse.x = disp.mouse_x;
             if(flip_x) mouse.x = disp.dimx() - mouse.x;
