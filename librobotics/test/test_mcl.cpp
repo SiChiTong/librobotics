@@ -27,14 +27,14 @@ int main(int argc, char* argv[]) {
     lb_mcl_grid2_data mcl_data;
     mcl_data.initialize(mcl_cfg);
 
-    lb_init_particle2(mcl_data.p, mcl_data.map, 3, pose2f(5.0, 7.0, -M_PI/3), 1.0, 0.0);
+    lb_init_particle2(mcl_data.p, mcl_data.map, 4, pose2f(4.5, 7.5, 0.0), 0.5, 0.5);
 
     cimg8u map = mcl_data.map.get_image().resize_doubleXY();
     disp.disp.resize(map);
 
-    lb_draw_paticle2(map, mcl_data.p, mcl_data.map, red, 3, ZOOM, 0.0, 0, 0, true);
 
-    lb_lrf_odo_log<LB_FLOAT> log("Odometry", "Laser");
+
+    lb_lrf_odo_log<LB_FLOAT> log("Odometry", "LRF0", 0.001);
     if(!log.open("../test_data/cart/log_1229617023.log")) {
         cout << "Cannot open file\n";
     }
@@ -62,15 +62,28 @@ int main(int argc, char* argv[]) {
         mcl_data.map.get_grid_position(disp.mouse.x/ZOOM, disp.mouse.y/ZOOM, map_pts);
         lb_draw_map2_grid_ray_cast(tmp, disp.mouse / 2, mcl_data.map, red, ZOOM, 0.0, 0.0, 0.0);
 
-        tmp.display(disp.disp);
+
 
         if(log.real_one_step()) {
-            lb_lrf_get_scan_point_from_scan_range(log.ranges, co, si, pts, 0, 768, 1, 0.001);
-        }
+            LB_PRINT_VAR(log.odo);
 
-        cimg8u lrf_img(800, 800, 1, 3, 0);
-        lb_draw_points_cimg(lrf_img, pts, red, 100, 0.0);
-        lrf_img.display(lrf_disp.disp);
+            lb_lrf_get_scan_point_from_scan_range(log.ranges, co, si, pts, 0, 768, 1, 0.001);
+            cimg8u lrf_img(800, 800, 1, 3, 0);
+            lb_draw_points_cimg(lrf_img, pts, red, 100.0, 0.0);
+            lrf_img.display(lrf_disp.disp);
+
+
+            lb_mcl_grid2_update_with_odomety(mcl_cfg, pts, log.odo, mcl_data);
+
+
+            lb_draw_paticle2(tmp, mcl_data.p, mcl_data.map, red, 3, ZOOM, 0.0, 0, 0, true);
+
+        }
+        tmp.display(disp.disp);
+
+
+
+
 
 
     }
