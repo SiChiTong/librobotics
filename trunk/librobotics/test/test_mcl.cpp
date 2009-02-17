@@ -27,7 +27,7 @@ int main(int argc, char* argv[]) {
     lb_mcl_grid2_data mcl_data;
     mcl_data.initialize(mcl_cfg);
 
-    lb_init_particle2(mcl_data.p, mcl_data.map, 4, pose2f(4.5, 7.5, 0.0), 0.5, 0.5);
+    lb_init_particle2(mcl_data.p, mcl_data.map, 4, pose2f(4.0, 7.5, 0.0), 1.0, 0.2);
 
     cimg8u map = mcl_data.map.get_image().resize_doubleXY();
     disp.disp.resize(map);
@@ -47,6 +47,7 @@ int main(int argc, char* argv[]) {
     lb_build_cos_sin_table(LB_DEG2RAD(-135), LB_DEG2RAD(135), 769, co, si);
     pts.resize(769);
 
+    unsigned long start_time, used_time;
 
 
     map.display(disp.disp);
@@ -72,8 +73,15 @@ int main(int argc, char* argv[]) {
             lb_draw_points_cimg(lrf_img, pts, red, 100.0, 0.0);
             lrf_img.display(lrf_disp.disp);
 
+            start_time = utils_get_current_time();
+            lb_mcl_grid2_update_with_odomety(mcl_cfg, pts, log.odo, mcl_data, 60);
+            used_time = utils_get_current_time() - start_time;
+            LB_PRINT_VAR(used_time);
 
-            lb_mcl_grid2_update_with_odomety(mcl_cfg, pts, log.odo, mcl_data);
+            start_time = utils_get_current_time();
+            lb_particle_stratified_resample(mcl_data.p, 500);
+            used_time = utils_get_current_time() - start_time;
+            LB_PRINT_VAR(used_time);
 
 
             lb_draw_paticle2(tmp, mcl_data.p, mcl_data.map, red, 3, ZOOM, 0.0, 0, 0, true);
