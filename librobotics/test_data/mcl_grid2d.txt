@@ -1,15 +1,15 @@
 map_config_file = ../test_data/grid2_map.cfg 	#map configuration file
 map_image_file = ../test_data/grid2_map.png  	#map image file
 map_angle_res = 0.034906585						#ray casting cache angle per step
-n_particles = 100								#number of particles
+n_particles = 1000								#number of particles
 min_particels = 0.3								#resample percentage
 a_slow = 0.001									#slow decay rate
 a_fast = 0.1									#fast decay rate
 v_factor = 2.0
-motion_var[0] = 0.01							#motion \signma_0 for both motion model
-motion_var[1] = 0.001	 						#motion \signma_1 for both motion model
-motion_var[2] = 0.01 							#motion \signma_2 for both motion model
-motion_var[3] = 0.001							#motion \signma_3 for both motion model
+motion_var[0] = 0.1							#motion \signma_0 for both motion model
+motion_var[1] = 0.01	 						#motion \signma_1 for both motion model
+motion_var[2] = 0.1 							#motion \signma_2 for both motion model
+motion_var[3] = 0.01							#motion \signma_3 for both motion model
 motion_var[4] = 0.0 							#motion \signma_4 for only velocity motion model
 motion_var[5] = 0.0								#motion \signma_5 for only velocity motion model
 
