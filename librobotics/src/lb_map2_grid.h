@@ -282,7 +282,7 @@ namespace librobotics {
             LB_PRINT_STREAM << "Move from: " << start << " (" << grid_start
                             <<  ") to: " << goal << "  (" << grid_goal << ")\n";
 
-#warning "not implement"
+//#warning "not implement"
 
             return true;
         }

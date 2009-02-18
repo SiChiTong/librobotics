@@ -35,7 +35,7 @@ int main(int argc, char* argv[]) {
 
 
     lb_lrf_odo_log<LB_FLOAT> log("Odometry", "LRF0", 0.001);
-    if(!log.open("../test_data/cart/log_1229617023.log")) {
+    if(!log.open("../test_data/log_1229617023.log")) {
         cout << "Cannot open file\n";
     }
 
