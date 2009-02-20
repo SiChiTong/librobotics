@@ -316,7 +316,7 @@ struct lb_kalman_tracker2_object {
                         found = true;
                     }
                 } else {
-                    warn("%s distance change limit", __FUNCTION__);
+                    debug("lb_kalman_tracker2_object::%s distance change limit", __FUNCTION__);
                 }
             }
 
@@ -328,71 +328,56 @@ struct lb_kalman_tracker2_object {
 
                 if(found) {
                     nstate = STATE_TRACK;
-//                    LB_PRINT_VAL("go STATE_BEGIN");
                 } else {
                     nstate = STATE_START;
-//                    LB_PRINT_VAL("repeat STATE_START");
                 }
 
                 break;
             case STATE_BEGIN :
                 if(found) {
-//                    LB_PRINT_VAL("Waiting");
                     found_cnt++;
                     if(found_cnt > min_found_frame) {
                         nstate = STATE_TRACK;
-//                        LB_PRINT_VAL("go STATE_TRACK");
                         break;
                     }
                 } else {
-//                    LB_PRINT_VAL("lost during waiting");
                     found_cnt--;
                     if(found_cnt <= 0) {
                         nstate = STATE_LOST;
-//                        LB_PRINT_VAL("go STATE_LOST");
                         break;
                     }
                 }
                 nstate = STATE_BEGIN;
-//                LB_PRINT_VAL("repeat STATE_BEGIN");
-
                 break;
             case STATE_TRACK :
                 if(found) {
-//                    LB_PRINT_VAL("Predict and update");
                     tracker.predict_update(good_point, last_p, last_v);
                     found_cnt++;
                     if(found_cnt > max_lost_frame)
                         found_cnt = max_lost_frame;
                     nstate = STATE_TRACK;
-//                    LB_PRINT_VAL("repeat STATE_TRACK");
                 } else {
                     tracker.predict(last_p, last_v);
                     found_cnt--;
                     if(found_cnt <= 0) {
                         nstate = STATE_LOST;
-//                        LB_PRINT_VAL("go STATE_LOST");
                         break;
                     }
                     nstate = STATE_PREDICT;
-//                    LB_PRINT_VAL("go STATE_PREDICT");
                 }
                 break;
             case STATE_PREDICT:
                 if(!found) {
-//                    LB_PRINT_VAL("Predict only");
                     tracker.predict(last_p, last_v);
                     found_cnt--;
                     if(found_cnt <= 0) {
                         nstate = STATE_LOST;
-//                        LB_PRINT_VAL("go STATE_LOST");
                         break;
                     }
                 } else {
                     tracker.predict_update(good_point, last_p, last_v);
                     found_cnt++;
                     nstate = STATE_TRACK;
-//                    LB_PRINT_VAL("go STATE_TRACK");
                 }
 
                 break;
@@ -401,23 +386,19 @@ struct lb_kalman_tracker2_object {
                     LB_PRINT_VAL("Recover");
                     found_cnt = 1;
                     nstate = STATE_BEGIN;
-//                    LB_PRINT_VAL("go STATE_BEGIN");
                 } else {
                     LB_PRINT_VAL("Lost");
                     found_cnt--;
                     if(found_cnt < -(max_lost_frame/2)) {
                         found_cnt = 0;
                         nstate = STATE_DIE;
-//                        LB_PRINT_VAL("go STATE_DIE");
                     } else {
                         nstate = STATE_LOST;
-//                        LB_PRINT_VAL("repeat STATE_LOST");
                     }
                 }
                 break;
             case STATE_DIE :
                 nstate = STATE_DIE;
-//                LB_PRINT_VAL("repeat STATE_DIE");
                 break;
             case STATE_ERROR :
                 break;

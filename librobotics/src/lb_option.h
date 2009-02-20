@@ -38,7 +38,7 @@ typedef double  LB_FLOAT;
 
 
 #ifndef librobotics_debug
-#define librobotics_debug           2
+#define librobotics_debug           1
 #endif
 
 #ifndef librobotics_use_vt100
