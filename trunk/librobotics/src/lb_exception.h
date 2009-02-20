@@ -57,8 +57,8 @@ namespace librobotics {
      * The way error messages are handled by LibRobotics can be changed dynamically, using this function.
      * Possible values are :
      *      - 0 to hide debug messages (quiet mode, but exceptions are still thrown).
-     *      - 1 to display debug messages on standard error (stderr).
-     *      - 2 to display debug messages in modal windows (default behavior).
+     *      - 1 to display warning messages on standard error (default behavior).
+     *      - 2 to display warning and debug messages on standard error.
      */
     inline unsigned int& exception_mode() { static unsigned int mode = librobotics_debug; return mode; }
 
@@ -120,7 +120,7 @@ namespace librobotics {
 
     /**
      * Display a warning message.
-     * \param format is a C-string describing the format of the message, as in <tt>std::printf()</tt>.
+     * \param format is a C-string describing the format of the message, as in std::printf().
      */
     inline void warn(const char *format, ...) {
         if (librobotics::exception_mode() >= 1) {
@@ -134,6 +134,21 @@ namespace librobotics {
             #else
                 std::fprintf(stderr,"%s# LibRobotics Warning%s : %s\n",librobotics::t_red,librobotics::t_normal,message);
             #endif
+        }
+    }
+
+    /**
+     * Display a debug message.
+     * \param format is a C-string describing the format of the message, as in std::printf().
+     */
+    inline void debug(const char *format, ...) {
+        if (librobotics::exception_mode() >= 2) {
+            char message[8192];
+            std::va_list ap;
+            va_start(ap,format);
+            std::vsprintf(message,format,ap);
+            va_end(ap);
+            std::fprintf(stderr,"%s# LibRobotics Debug%s : %s\n",librobotics::t_red,librobotics::t_normal,message);
         }
     }
 }

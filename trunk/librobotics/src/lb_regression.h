@@ -132,7 +132,7 @@ inline void lb_liner_regression(const std::vector<vec2<T> >& points,
         }
     } else {
         m = b = r = 0;
-        warn("%s number of point == 0", __FUNCTION__);
+        debug("%s number of point == 0", __FUNCTION__);
     }
 }
 

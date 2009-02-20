@@ -201,11 +201,11 @@ inline pose2f lb_odometry_motion_model_sample(const pose2f& u_pt,
  * @param var
  * @return
  */
-LB_FLOAT odometry_motion(pose2f pt,
-                         pose2f u_pt,
-                         pose2f u_p,
-                         pose2f p,
-                         LB_FLOAT var[6])
+inline LB_FLOAT odometry_motion(pose2f pt,
+                                pose2f u_pt,
+                                pose2f u_p,
+                                pose2f p,
+                                LB_FLOAT var[6])
 {
     LB_FLOAT rot1 = lb_minimum_angle_distance(u_p.a, atan2(u_pt.y - u_p.y, u_pt.x - u_p.x));
     LB_FLOAT tran = (u_pt.get_vec2() - u_p.get_vec2()).size();
