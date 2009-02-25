@@ -325,7 +325,6 @@ struct lb_kalman_tracker2_object {
         switch(state) {
             case STATE_START :
                 found_cnt = max_lost_frame / 2; //start immediately
-
                 if(found) {
                     nstate = STATE_TRACK;
                 } else {
@@ -383,11 +382,9 @@ struct lb_kalman_tracker2_object {
                 break;
             case STATE_LOST :
                 if(found) {
-                    LB_PRINT_VAL("Recover");
                     found_cnt = 1;
                     nstate = STATE_BEGIN;
                 } else {
-                    LB_PRINT_VAL("Lost");
                     found_cnt--;
                     if(found_cnt < -(max_lost_frame/2)) {
                         found_cnt = 0;

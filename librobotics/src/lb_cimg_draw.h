@@ -308,6 +308,35 @@ inline void lb_draw_map2_grid_ray_cast(cimg8u& img,
 
 }
 
+//template<typename M>
+//inline void lb_draw_map2_grid_diff_drive_robot(cimg8u& img,
+//                                               const pose2d& robot,
+//                                               float size_x,
+//                                               float size_y,
+//                                               float wheel_x,
+//                                               const M& map,
+//                                               const unsigned char color[],
+//                                               LB_FLOAT scale = 1.0,
+//                                               LB_FLOAT angle = 0.0,
+//                                               int x_offset = -1,
+//                                               int y_offset = -1,
+//                                               bool draw_dir = false,
+//                                               bool flip_x = false,
+//                                               bool flip_y = true )
+//{
+//    lb_cimg_draw_offset_data();
+//    vec2f p0, p1, p2, p3;
+//    p0.x = size_x / 2.0 - wheel_x;
+//    p0.y = size_y / 2.0;
+//    p1.x = -(size_x / 2.0 + wheel_x);
+//    p1.y = p0.y;
+//    p2.x = p1.x;
+//    p2.y = -size_y / 2.0;
+//    p3.x = p0.x;
+//    p3.y = p2.y;
+//
+//}
+
 #endif
 
 
