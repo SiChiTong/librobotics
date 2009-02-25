@@ -47,6 +47,7 @@
 #include "src/lb_data_type.h"
 #include "src/lb_math_model.h"
 #include "src/lb_particle_function.h"
+#include "src/lb_math_area_check.h"
 
 //low level control function
 #include "src/lb_simple_control.h"

@@ -135,7 +135,7 @@ inline bool lb_vfh_find_open_angle(const vec2f& target,
                                    const std::vector<LB_FLOAT>& hs,
                                    const LB_FLOAT threshold,
                                    int open_segment,
-                                   const LB_FLOAT angle_res,
+                                   const LB_FLOAT angle_res_in_degree,
                                    vec2f& result)
 {
     size_t zero_cnt = 0;
@@ -227,7 +227,7 @@ inline bool lb_vfh_find_open_angle(const vec2f& target,
         if(num_subseg >= open_segment) {
             num_subseg -= open_segment;
             do {
-                good_angle = (k_begin[i] + (open_segment/2) + num_subseg) * angle_res;
+                good_angle = (k_begin[i] + (open_segment/2) + num_subseg) * angle_res_in_degree;
                 good_angle = LB_DEG2RAD(good_angle);
                 dir.x = cos(good_angle);
                 dir.y = sin(good_angle);
@@ -243,7 +243,7 @@ inline bool lb_vfh_find_open_angle(const vec2f& target,
                 num_subseg--;
             } while (num_subseg >= 0);
         } else {
-            good_angle = LB_DEG2RAD(center * angle_res);
+            good_angle = LB_DEG2RAD(center * angle_res_in_degree);
             dir.x = cos(good_angle);
             dir.y = sin(good_angle);
             d = dir ^ target.get_normalize();
