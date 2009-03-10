@@ -37,9 +37,11 @@
 
 namespace librobotics {
 
-
+/**
+ *  Data structure for particle in 2D MCL
+ */
 struct lb_mcl2_particle {
-    pose2f p;                //!< robot position
+    pose2f p;                   //!< robot position
     LB_FLOAT w;                 //!< weight
     lb_mcl2_particle() : w(0) { }
 
@@ -60,13 +62,13 @@ struct lb_mcl2_particle {
  * Configuration for MCL on grid2 map
  */
 struct lb_mcl_grid2_configuration {
-    std::string map_config_file;         //!< map configuration file
-    std::string map_image_file;          //!< map image files
-    LB_FLOAT map_angle_res;     //!< pre-compute ray casting angle resolution
+    std::string map_config_file;        //!< map configuration file
+    std::string map_image_file;         //!< map image files
+    LB_FLOAT map_angle_res;             //!< pre-compute ray casting angle resolution
 
     int n_particles;            //!< number of particles
     LB_FLOAT min_particels;     //!< in percentage of n_particles \f$(0.0, 1.0)\f$
-    LB_FLOAT a_slow, a_fast;    //!< decay rate for augmented MCL
+//    LB_FLOAT a_slow, a_fast;    //!< decay rate for augmented MCL
     LB_FLOAT v_factor;
     LB_FLOAT motion_var[6];     //!< \f$(\sigma_0...\sigma_3)\f$ in odometry mode \n \f$(\sigma_0...\sigma_5)\f$ in velocity mode
     LB_FLOAT map_var;           //!< compute directly from map resolution
@@ -77,7 +79,7 @@ struct lb_mcl_grid2_configuration {
 
 
     /**
-     * Simple load a configuration from text file
+     * Load the configuration from text file
      * @param filename
      */
     void load(const std::string& filename) {
@@ -90,8 +92,8 @@ struct lb_mcl_grid2_configuration {
 
             LOAD_N_SHOW_CFG(n_particles, int);
             LOAD_N_SHOW_CFG(min_particels, LB_FLOAT);
-            LOAD_N_SHOW_CFG(a_slow, LB_FLOAT);
-            LOAD_N_SHOW_CFG(a_fast, LB_FLOAT);
+//            LOAD_N_SHOW_CFG(a_slow, LB_FLOAT);
+//            LOAD_N_SHOW_CFG(a_fast, LB_FLOAT);
             LOAD_N_SHOW_CFG(v_factor, LB_FLOAT);
             LOAD_N_SHOW_CFG(motion_var[0], LB_FLOAT);
             LOAD_N_SHOW_CFG(motion_var[1], LB_FLOAT);
@@ -117,7 +119,7 @@ struct lb_mcl_grid2_configuration {
 
 
 /**
- * Data for MCL on grid2 map
+ * Data structure for MCL on grid2 map
  */
 struct lb_mcl_grid2_data {
     std::vector<lb_mcl2_particle> p;         //!< current particle set
@@ -125,6 +127,10 @@ struct lb_mcl_grid2_data {
     lb_grid2_data map;                       //!< gird map
     pose2f last_odo_pose;                    //!< last odometry position
 
+    /**
+     * Initialize data with information form configuration data
+     * @param cfg
+     */
     void initialize(const lb_mcl_grid2_configuration& cfg) {
         p.resize(cfg.n_particles);
         p_tmp.resize(cfg.n_particles);
@@ -137,7 +143,15 @@ struct lb_mcl_grid2_data {
     }
 };
 
-
+/**
+ * Monte Carlo Localization (MCL) in 2D grid map
+ * @param cfg configuration data
+ * @param z vector relative LRF measurement point
+ * @param odo_pose odometry measurement at current position
+ * @param data MCL2 data structure
+ * @param z_down_sample measurement down sample
+ * @return
+ */
 inline int lb_mcl_grid2_update_with_odomety(const lb_mcl_grid2_configuration& cfg,
                                             const std::vector<vec2f>& z,
                                             const pose2f& odo_pose,

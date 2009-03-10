@@ -141,7 +141,7 @@ inline bool lb_point_is_inside_polygon(const std::vector<vec2f>& polygon,
     LB_FLOAT yt = point.y;
 
     size_t n_point = polygon.size();
-    if(n < 3) return false;
+    if(n_point < 3) return false;
 
     bool inside = false;
 
