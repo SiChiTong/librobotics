@@ -94,13 +94,13 @@ struct lb_mcl_grid2_configuration {
             LOAD_N_SHOW_CFG(min_particels, LB_FLOAT);
 //            LOAD_N_SHOW_CFG(a_slow, LB_FLOAT);
 //            LOAD_N_SHOW_CFG(a_fast, LB_FLOAT);
-            LOAD_N_SHOW_CFG(v_factor, LB_FLOAT);
+//            LOAD_N_SHOW_CFG(v_factor, LB_FLOAT);
             LOAD_N_SHOW_CFG(motion_var[0], LB_FLOAT);
             LOAD_N_SHOW_CFG(motion_var[1], LB_FLOAT);
             LOAD_N_SHOW_CFG(motion_var[2], LB_FLOAT);
             LOAD_N_SHOW_CFG(motion_var[3], LB_FLOAT);
-            LOAD_N_SHOW_CFG(motion_var[4], LB_FLOAT);
-            LOAD_N_SHOW_CFG(motion_var[5], LB_FLOAT);
+//            LOAD_N_SHOW_CFG(motion_var[4], LB_FLOAT);
+//            LOAD_N_SHOW_CFG(motion_var[5], LB_FLOAT);
 
             LOAD_N_SHOW_CFG(map_var, LB_FLOAT);
             LOAD_N_SHOW_CFG(z_max_range, LB_FLOAT);
