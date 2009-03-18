@@ -116,6 +116,16 @@ bool lb_particle_stratified_resample(std::vector<T>& p, int n_min) {
     return true;
 }
 
+/**
+ * A Function for initialize 2D position of all particle to a selected mode
+ * @param p std::vector<> of particle
+ * @param map
+ * @param mode
+ * @param start
+ * @param param0
+ * @param param1
+ */
+
 template<typename P, typename M>
 void lb_init_particle2(std::vector<P>& p,
                        const M& map,
