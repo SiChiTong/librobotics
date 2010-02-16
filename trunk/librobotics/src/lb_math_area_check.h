@@ -136,7 +136,9 @@ namespace librobotics {
 inline bool lb_point_is_inside_polygon(const std::vector<vec2f>& polygon,
                                        const vec2f& point)
 {
+#if !defined(_MSC_VER)
 #warning "NOT TEST YET"
+#endif
     LB_FLOAT xt = point.x;
     LB_FLOAT yt = point.y;
 
